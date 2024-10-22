@@ -113,11 +113,14 @@ def agenda(request):
         if(paramentro == False):
             return render(request, 'agenda.html', {'lista_dados': lista_dados, 'form':form_date})
         else:
-            print(lista_filtrada)
             somatorio_produtos = defaultdict(int)
             for nome, data, local, observacao, itens, telefone, endereco in lista_filtrada:
-                for item, quantidade in itens:
-                    somatorio_produtos[item.nome] += quantidade
+                for item in itens:
+                    # item é uma lista [nome_do_produto, quantidade]
+                    produto_nome = item[0]  # Acessando o nome do produto
+                    quantidade_alugada = item[1]  # Acessando a quantidade
+                    somatorio_produtos[produto_nome] += quantidade_alugada
+            print(somatorio_produtos)
             return render(request, 'agenda.html', {'lista_dados': lista_filtrada, 'form': form_date,'somatorio_produtos': dict(somatorio_produtos)})
 
 
