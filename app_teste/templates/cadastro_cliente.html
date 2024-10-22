@@ -1,0 +1,176 @@
+{% extends 'index.html' %}
+
+{% block content %}
+
+<script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+
+  <nav class="navbar"  style="margin-top: 50px;" >
+    <a class="navbar-brand" href="#">Cadastro do cliente</a>
+  </nav>
+
+  {% if sucesso == 1 %}
+        <div class="alert alert-success" role="alert">
+            Cliente salvo com Sucesso
+        </div>
+    {% elif sucesso == 0 %}
+        <div class="alert alert-danger" role="alert">
+            Falha ao salvar o cadastro
+        </div>
+    {% else %}
+    {% endif %}
+
+  <form class="row g-2" method="post">
+
+    <div class="col-8">
+      {% csrf_token %}
+      {{ form.nome.label_tag }} {{ form.nome }} {{ form.nome.errors }}
+    </div>
+
+    <div class="col-md-0"></div>
+
+    <div class="col-md-4">
+      {% csrf_token %}
+      {{ form.telefone.label_tag }} {{ form.telefone }} {{ form.telefone.errors }}
+    </div>
+
+    <div class="col-md-4">
+      {% csrf_token %}
+      {{ form.cep.label_tag }} {{ form.cep }} {{ form.cep.errors }}
+    </div>
+
+    <div class="col-md-0"></div>
+
+    <div class="col-4">
+      {% csrf_token %}
+      {{ form.estado.label_tag }} {{ form.estado }} {{ form.estado.errors }}
+    </div>
+
+    <div class="col-md-4">
+      {% csrf_token %}
+      {{ form.cidade.label_tag }} {{ form.cidade }} {{ form.cidade.errors }}
+    </div>
+
+    <div class="col-md-0"></div>
+
+     <div class="col-4">
+      {% csrf_token %}
+      {{ form.endereco.label_tag }} {{ form.endereco }} {{ form.endereco.errors }}
+    </div>
+
+    <div class="col-4">
+      {% csrf_token %}
+      {{ form.numero.label_tag }} {{ form.numero }} {{ form.numero.errors }}
+    </div>
+
+    <div class="col-8">
+      {% csrf_token %}
+      {{ form.referencia.label_tag }} {{ form.referencia }} {{ form.referencia.errors }}
+    </div>
+
+    <div class="col-12">
+      <button type="submit" class="btn btn-primary">Salvar</button>
+    </div>
+
+  </form>
+
+
+  <script>
+    $(document).ready(function(){
+        function removerCaracteresEspeciais(texto) {
+            return texto.replace(/[^\d]/g, '');  // Remove todos os caracteres que não são dígitos
+        }
+
+        function buscarCep() {
+            var cep = $("#cep").val();
+            cep = removerCaracteresEspeciais(cep);  // Remove caracteres especiais do CEP
+
+            // Verifica se o CEP foi preenchido corretamente
+            if (cep.length == 8 && !isNaN(cep)) {
+                $.ajax({
+                    url: "https://viacep.com.br/ws/" + cep + "/json/",
+                    type: "GET",
+                    dataType: "json",
+                    success: function(data) {
+                        // Atualiza os campos com os dados do CEP
+                        $("#inputendereco").val(data.logradouro);
+                        $("#inputcidade").val(data.localidade);
+                        $("#inputestado").val(data.uf);
+                    },
+                    error: function() {
+                        alert("Erro ao buscar o CEP. Verifique se o CEP é válido.");
+                    }
+                });
+            } else {
+                alert("CEP inválido. Por favor, digite um CEP válido.");
+            }
+        }
+
+        // Adiciona evento blur (foco perdido) ao campo de CEP
+        $("#cep").blur(function() {
+            buscarCep();
+        });
+
+        // Adiciona evento click ao botão de busca de CEP
+        $("#buscarCep").click(function() {
+            buscarCep();
+        });
+    });
+</script>
+
+<script>
+  function formatarCEP(input) {
+      let cep = input.value.replace(/\D/g, '');
+
+      if (cep.length === 8) {
+          cep = cep.replace(/^(\d{5})(\d{3})$/, "$1-$2");
+          input.value = cep;
+      }
+  }
+
+  // Adicione um ouvinte de evento para formatar o CEP quando o usuário digitar
+  document.getElementById('cep').addEventListener('input', function() {
+      formatarCEP(this);
+  });
+</script>
+
+<script>
+  function formatarTelefone(input) {
+    let telefone = input.value.replace(/\D/g, ''); // Remove caracteres não numéricos
+
+    if (telefone.length === 11) {
+      // Formato para telefone com DDD (11 dígitos)
+      telefone = telefone.replace(/^(\d{2})(\d{5})(\d{4})$/, "($1) $2-$3");
+    } else if (telefone.length === 10) {
+      // Formato para telefone sem DDD (10 dígitos)
+      telefone = telefone.replace(/^(\d{5})(\d{4})$/, "$1-$2");
+    }
+
+    input.value = telefone;
+  }
+
+  // Adiciona um ouvinte de evento para formatar o telefone quando o usuário digitar
+  document.getElementById('tel').addEventListener('input', function() {
+    formatarTelefone(this);
+  });
+</script>
+
+<script>
+  function formatarDataNascimento(input) {
+    let dataNascimento = input.value.replace(/\D/g, ''); // Remove caracteres não numéricos
+
+    if (dataNascimento.length === 8) {
+      // Formato para data de nascimento (8 dígitos)
+      dataNascimento = dataNascimento.replace(/^(\d{2})(\d{2})(\d{4})$/, "$1/$2/$3");
+    }
+
+    input.value = dataNascimento;
+  }
+
+  // Adiciona um ouvinte de evento para formatar a data de nascimento quando o usuário digitar
+  document.getElementById('nasc').addEventListener('input', function() {
+    formatarDataNascimento(this);
+  });
+</script>
+
+
+{% endblock %}

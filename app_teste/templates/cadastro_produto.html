@@ -1,0 +1,26 @@
+{% extends 'index.html' %}
+
+{% block content %}
+
+    <nav class="navbar"  style="margin-top: 50px;" >
+       <a class="navbar-brand" href="#">Cadastro do produto</a>
+   </nav>
+
+    {% if sucesso == 1 %}
+        <div class="alert alert-success" role="alert">
+            Produto salvo com Sucesso
+        </div>
+    {% elif sucesso == 0 %}
+        <div class="alert alert-danger" role="alert">
+            Falha ao salvar o cadastro
+        </div>
+    {% else %}
+    {% endif %}
+
+<form method="post" >
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit" class="btn btn-primary">Salvar</button>
+</form>
+
+{% endblock %}

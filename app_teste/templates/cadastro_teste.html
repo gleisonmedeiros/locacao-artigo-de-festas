@@ -1,0 +1,177 @@
+{% extends 'index.html' %}
+
+{% block content %}
+
+  <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+
+  <div class="alert alert-success" role="alert" style="margin-top: 80px;">
+      Botão cadastrar clicado com sucesso!!
+  </div>
+
+  <form class="row g-3">
+
+    <div class="col-8">
+      <label for="inputAddress" class="form-label">Nome</label>
+      <input type="text" class="form-control" id="inputAddress" placeholder="">
+    </div>
+
+    <div class="col-md-0"></div>
+
+    <div class="col-4">
+      <label for="nasc" class="form-label">Data de Nascimento</label>
+      <input type="text" class="form-control" id="nasc" placeholder="00/00/0000">
+    </div>
+
+    <div class="col-md-4">
+      <label for="inputState" class="form-label">Sexo</label>
+      <select id="inputState" class="form-select">
+        <option selected>Escolha...</option>
+        <option>Masculino</option>
+        <option>Feminino</option>
+        <option>Outros</option>
+      </select>
+    </div>
+
+    <div class="col-md-0"></div>
+
+    <div class="col-md-4">
+      <label for="inputCity" class="form-label">Telefone</label>
+      <input type="text" class="form-control" id="tel" placeholder="(00) 00000 - 0000">
+    </div>
+
+    <div class="col-md-4">
+      <label for="inputAddress2" class="form-label">Cep</label>
+      <input type="text" class="form-control" id="cep" placeholder="00000 - 000">
+    </div>
+
+    <div class="col-md-0"></div>
+
+    <div class="col-4">
+      <label for="inputAddress2" class="form-label">Estado</label>
+      <input type="text" class="form-control" id="inputestado" placeholder="">
+    </div>
+
+    <div class="col-md-4">
+      <label for="inputCity" class="form-label">Cidade</label>
+      <input type="text" class="form-control" id="inputcidade" placeholder="">
+    </div>
+
+    <div class="col-md-0"></div>
+
+     <div class="col-4">
+      <label for="inputAddress" class="form-label">Endereço</label>
+      <input type="text" class="form-control" id="inputendereco" placeholder="">
+    </div>
+
+    <div class="col-4">
+      <label for="inputAddress" class="form-label">Número</label>
+      <input type="text" class="form-control" id="inputnumero" placeholder="">
+    </div>
+
+    <div class="col-12">
+      <button type="submit" class="btn btn-primary">Salvar</button>
+    </div>
+
+  </form>
+
+
+  <script>
+    $(document).ready(function(){
+        function removerCaracteresEspeciais(texto) {
+            return texto.replace(/[^\d]/g, '');  // Remove todos os caracteres que não são dígitos
+        }
+
+        function buscarCep() {
+            var cep = $("#cep").val();
+            cep = removerCaracteresEspeciais(cep);  // Remove caracteres especiais do CEP
+
+            // Verifica se o CEP foi preenchido corretamente
+            if (cep.length == 8 && !isNaN(cep)) {
+                $.ajax({
+                    url: "https://viacep.com.br/ws/" + cep + "/json/",
+                    type: "GET",
+                    dataType: "json",
+                    success: function(data) {
+                        // Atualiza os campos com os dados do CEP
+                        $("#inputendereco").val(data.logradouro);
+                        $("#inputcidade").val(data.localidade);
+                        $("#inputestado").val(data.uf);
+                    },
+                    error: function() {
+                        alert("Erro ao buscar o CEP. Verifique se o CEP é válido.");
+                    }
+                });
+            } else {
+                alert("CEP inválido. Por favor, digite um CEP válido.");
+            }
+        }
+
+        // Adiciona evento blur (foco perdido) ao campo de CEP
+        $("#cep").blur(function() {
+            buscarCep();
+        });
+
+        // Adiciona evento click ao botão de busca de CEP
+        $("#buscarCep").click(function() {
+            buscarCep();
+        });
+    });
+</script>
+
+<script>
+  function formatarCEP(input) {
+      let cep = input.value.replace(/\D/g, '');
+
+      if (cep.length === 8) {
+          cep = cep.replace(/^(\d{5})(\d{3})$/, "$1-$2");
+          input.value = cep;
+      }
+  }
+
+  // Adicione um ouvinte de evento para formatar o CEP quando o usuário digitar
+  document.getElementById('cep').addEventListener('input', function() {
+      formatarCEP(this);
+  });
+</script>
+
+<script>
+  function formatarTelefone(input) {
+    let telefone = input.value.replace(/\D/g, ''); // Remove caracteres não numéricos
+
+    if (telefone.length === 11) {
+      // Formato para telefone com DDD (11 dígitos)
+      telefone = telefone.replace(/^(\d{2})(\d{5})(\d{4})$/, "($1) $2-$3");
+    } else if (telefone.length === 10) {
+      // Formato para telefone sem DDD (10 dígitos)
+      telefone = telefone.replace(/^(\d{5})(\d{4})$/, "$1-$2");
+    }
+
+    input.value = telefone;
+  }
+
+  // Adiciona um ouvinte de evento para formatar o telefone quando o usuário digitar
+  document.getElementById('tel').addEventListener('input', function() {
+    formatarTelefone(this);
+  });
+</script>
+
+<script>
+  function formatarDataNascimento(input) {
+    let dataNascimento = input.value.replace(/\D/g, ''); // Remove caracteres não numéricos
+
+    if (dataNascimento.length === 8) {
+      // Formato para data de nascimento (8 dígitos)
+      dataNascimento = dataNascimento.replace(/^(\d{2})(\d{2})(\d{4})$/, "$1/$2/$3");
+    }
+
+    input.value = dataNascimento;
+  }
+
+  // Adiciona um ouvinte de evento para formatar a data de nascimento quando o usuário digitar
+  document.getElementById('nasc').addEventListener('input', function() {
+    formatarDataNascimento(this);
+  });
+</script>
+
+
+{% endblock %}

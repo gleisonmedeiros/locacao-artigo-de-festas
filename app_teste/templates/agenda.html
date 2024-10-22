@@ -1,0 +1,104 @@
+{% extends 'index.html' %}
+
+{% block content %}
+
+<div style="margin-top: 60px;"></div>
+<form method="POST">
+    <div style="display: flex; align-items: center;">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <input type="submit" class="btn btn-light" name="pesquisar" value="Pesquisar">
+    </div>
+</form>
+
+<div class="row">
+    {% for nome, data, local, observacao, itens, telefone, endereco in lista_dados %}
+        <div class="col-md-4">
+            <div class="card" style="width: 25rem;">
+                <div class="card-body">
+                    <h5 class="card-title">{{ nome }}</h5>
+
+                    <div class="card-text"><b>Telefone: </b>{{ telefone }}</div>
+                    <div class="card-text"><b>Data de Locação: </b>{{ data }}</div>
+                    <div class="card-text"><b>Endereço: </b>{{ endereco }}</div>
+                    <div class="card-text"><b>Local: </b>{{ local }}</div>
+                    <div class="card-text"><b>Observação: </b>{{ observacao }}</div>
+
+                    <div class="card-text">
+                        <b>Produtos:</b>
+                        <div id="produtos-limitados-{{ forloop.counter }}">
+                            {% for item in itens|slice:":1" %}
+                                <div> {{ item.1 }} - {{ item.0 }} </div>
+                            {% endfor %}
+                        </div>
+                        {% if itens|length > 1 %}
+                            <div id="produtos-completos-{{ forloop.counter }}" style="display: none;">
+                                {% for item in itens %}
+                                    <div> {{ item.1 }} - {{ item.0 }} </div>
+                                {% endfor %}
+                            </div>
+                             <button type="button" class="btn btn-outline-warning" onclick="toggleProdutos({{ forloop.counter }});">Mais...</button>
+                        {% endif %}
+                    </div>
+
+                    <form method="POST">
+                        {% csrf_token %}
+
+                        <!-- Button trigger modal -->
+                        <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#exampleModal{{ forloop.counter }}">
+                            Deletar
+                        </button>
+
+                        <!-- Modal -->
+                        <div class="modal fade" id="exampleModal{{ forloop.counter }}" tabindex="-1" aria-labelledby="exampleModalLabel{{ forloop.counter }}" aria-hidden="true">
+                            <div class="modal-dialog">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h1 class="modal-title fs-5" id="exampleModalLabel">ATENÇÃO</h1>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        Você tem certeza que deseja deletar este pedido?
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Cancelar</button>
+
+                                        <input type="hidden" name="nome" value="{{ nome }}">
+                                        <input type="hidden" name="data" value="{{ data }}">
+                                        <input type="submit" class="btn btn-danger" name="delete_itens" value="Sim">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Fim Button trigger modal -->
+                    </form>
+
+                </div>
+            </div>
+        </div>
+    {% endfor %}
+</div>
+
+<!-- Mostra o somatório de produtos -->
+<div class="mt-3">
+<b>Somatório de Produtos:</b>
+{% for produto, quantidade in somatorio_produtos.items %}
+    <div>{{ produto }}: {{ quantidade }}</div>
+{% endfor %}
+
+<script>
+    function toggleProdutos(index) {
+        var produtosLimitados = document.getElementById("produtos-limitados-" + index);
+        var produtosCompletos = document.getElementById("produtos-completos-" + index);
+
+        if (produtosCompletos.style.display === "none") {
+            produtosCompletos.style.display = "block";
+            produtosLimitados.style.display = "none";
+        } else {
+            produtosCompletos.style.display = "none";
+            produtosLimitados.style.display = "block";
+        }
+    }
+</script>
+
+{% endblock %}
