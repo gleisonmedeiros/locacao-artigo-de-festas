@@ -1,0 +1,36 @@
+{% extends 'index.html' %}
+
+{% block content %}
+
+    <nav class="navbar"  style="margin-top: 50px;" >
+        <a class="navbar-brand" href="#">Pesquisar Produto</a>
+    </nav>
+
+    <div class="col-4">
+        <form method="GET" action="{% url 'listar_produtos' %}">
+            <input name="search" class="form-control" type="text" placeholder="Pesquisar Produtos" aria-label="default input example">
+            <button style="margin-top: 10px;" type="submit" class="btn btn-primary">Buscar</button>
+        </form>
+    </div>
+
+<table>
+    <thead>
+        <tr>
+            <th>Nome</th>
+            <th>Modelo</th>
+            <th>Quantidade</th>
+            <th>Ações</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for produto in produtos %}
+        <tr>
+            <td>{{ produto.nome }}</td>
+            <td>{{ produto.modelo }}</td>
+            <td>{{ produto.quantidade }}</td>
+            <td><a href="">Editar</a></td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

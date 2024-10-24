@@ -4,7 +4,8 @@ from .views import (ola_mundo,
                     cadastro_cliente,
                     cadastro_pedido,
                     cadastro_produto,
-                    agenda, pesquisacliente)
+                    agenda, pesquisacliente,
+                    listar_produtos)
 
 urlpatterns = [
     path('ola-mundo/', ola_mundo, name='ola_mundo'),
@@ -14,4 +15,5 @@ urlpatterns = [
     path('cadastro-produto/', cadastro_produto, name='cadastro_produto'),
     path('agenda/', agenda, name='agenda'),
     path('pesquisacliente/', pesquisacliente, name='pesquisacliente'),
+    path('listar_produtos/', listar_produtos, name='listar_produtos'),
 ]

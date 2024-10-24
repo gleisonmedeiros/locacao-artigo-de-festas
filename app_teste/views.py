@@ -14,6 +14,14 @@ locale.setlocale(locale.LC_TIME, 'pt_BR.utf-8')
 
 lista2 = []
 
+def listar_produtos(request):
+    query = request.GET.get('search')
+    if query:
+        produtos = Produto_Model.objects.filter(nome__icontains=query)
+    else:
+        produtos = Produto_Model.objects.all()
+    return render(request, 'pesquisa_produto.html', {'produtos': produtos})
+
 
 def ola_mundo(request):
     return HttpResponse("Ola mundo!")
