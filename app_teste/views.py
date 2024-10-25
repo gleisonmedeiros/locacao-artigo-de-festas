@@ -1,4 +1,4 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse
 from .forms import ProdutoForm, ClienteForm, PedidoModelForm, DateRangeForm
 from .models import Produto_Model
@@ -9,6 +9,7 @@ import locale
 from unidecode import unidecode
 from django.urls import reverse
 from collections import defaultdict
+from django.contrib import messages
 
 locale.setlocale(locale.LC_TIME, 'pt_BR.utf-8')
 
@@ -161,23 +162,50 @@ def agenda(request):
             return redirect('agenda')
 
 
+def excluir_produto(request, produto_id):
+    produto = get_object_or_404(Produto_Model, id=produto_id)
 
+    # Verifica se o produto está associado a algum pedido
+    if ItemPedido.objects.filter(produto=produto).exists():
+        #messages.error(request, 'Não é possível excluir este produto porque ele está associado a um pedido.')
+        messages = 'Não é possível excluir este produto porque ele está associado a um pedido.'
+        #return redirect('listar_produtos')  # Redireciona para a lista de produtos após a verificação
+        return render(request, 'pesquisa_produto.html', {'messages':messages})
 
-def cadastro_produto(request):
+    # A exclusão acontece quando a requisição é POST
     if request.method == 'POST':
-        form = ProdutoForm(request.POST)
+        produto.delete()
+        #messages.success(request, 'Produto excluído com sucesso!')
+        messages = 'Produto excluído com sucesso!'
+        return render(request, 'pesquisa_produto.html', {'messages':messages})
+
+    # Retorna um redirecionamento se não for um POST
+    return redirect('listar_produtos')
+
+def cadastro_produto(request, produto_id=None):
+    produto = None  # Inicialize a variável
+
+    if produto_id:
+        produto = get_object_or_404(Produto_Model, id=produto_id)
+        form = ProdutoForm(request.POST or None, instance=produto)
+    else:
+        form = ProdutoForm(request.POST or None)
+
+    if request.method == 'POST':
         if form.is_valid():
             form.save()
-            form = ProdutoForm()
+            form = ProdutoForm()  # Reinicia o formulário
             dicionario = {'form': form, 'sucesso': 1}
             return render(request, 'cadastro_produto.html', dicionario)
         else:
             dicionario = {'form': form, 'sucesso': 0}
             return render(request, 'cadastro_produto.html', dicionario)
-    else:
-        form = ProdutoForm()
-    return render(request, 'cadastro_produto.html', {'form': form})
 
+    # Atribua o produto ao formulário somente se ele existir
+    if produto:
+        form = ProdutoForm(instance=produto)
+
+    return render(request, 'cadastro_produto.html', {'form': form})
 
 def salva_pedido():
     global lista2

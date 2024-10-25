@@ -3,7 +3,13 @@
 {% block content %}
 
     <nav class="navbar"  style="margin-top: 50px;" >
-       <a class="navbar-brand" href="#">Cadastro do produto</a>
+       <a class="navbar-brand" href="#">
+           {% if form.instance.id %}  {# Verifica se o produto tem ID para edição #}
+                Editar Produto
+            {% else %}
+                Cadastro do Produto
+            {% endif %}
+       </a>
    </nav>
 
     {% if sucesso == 1 %}
