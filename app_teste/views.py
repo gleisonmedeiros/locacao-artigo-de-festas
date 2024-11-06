@@ -227,6 +227,13 @@ def salva_pedido():
 
 def cadastro_pedido(request):
     global lista2
+    print (lista2)
+    print("")
+
+    lista_itens = []
+
+    #print(lista_itens)
+
     if request.method == 'POST':
         form = PedidoModelForm(request.POST)
         if 'save_itens' in request.POST:
@@ -265,9 +272,15 @@ def cadastro_pedido(request):
                             #nome = texto.split(" - ")[0]
                             lista = [nome,produto.nome,produto.modelo,quantidade_alugada,nova_data,local,observacao,telefone,endereco]
                         lista2.append(lista)
-                        print(lista2)
+                        #print(lista2)
 
-                        return render(request, 'cadastro_pedido.html', {'form': form})  # Redirecionar para a página de sucesso após salvar
+                        for item in lista2:
+                            resultado_temporario = (f"{item[1]} - {item[2]} - {item[3]}")
+                            lista_itens.append(resultado_temporario)
+
+                        print(lista_itens)
+
+                        return render(request, 'cadastro_pedido.html', {'form': form,'lista_itens':lista_itens})  # Redirecionar para a página de sucesso após salvar
                     else:
                         print("Formulário do item não é válido")
             except:
@@ -288,7 +301,8 @@ def cadastro_pedido(request):
             lista2 = []
 
             return render(request, 'cadastro_pedido.html', contexto)
-    else:
+    elif  request.method == 'GET':
+        lista2 = []
         form = PedidoModelForm()
 
     return render(request, 'cadastro_pedido.html', {'form': form})

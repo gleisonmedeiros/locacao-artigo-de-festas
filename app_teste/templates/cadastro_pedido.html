@@ -80,6 +80,25 @@
 
 </form>
 
+<table class="table">
+  <thead>
+    <tr>
+      <th scope="col">Produto</th>
+    </tr>
+  </thead>
+   <tbody>
+            {% for item in lista_itens %}
+                <tr>
+                    <td>{{ item }}</td> <!-- Produto -->
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="3">Nenhum item cadastrado</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+</table>
+
 <script>
 
     function formatarTelefone(input) {
