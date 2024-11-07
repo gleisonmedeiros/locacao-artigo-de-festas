@@ -264,23 +264,42 @@ def cadastro_pedido(request):
                     # Salvar itens do pedido
                     itens_pedido_formset = form.itens_pedido(queryset=ItemPedido.objects.none(), data=request.POST)
                     if itens_pedido_formset.is_valid():
-
+                        salvar = True
                         for formset_form in itens_pedido_formset:
                             produto = formset_form.cleaned_data.get('produto')
                             quantidade_alugada = formset_form.cleaned_data.get('quantidade_alugada')
-                            #texto = (str(pedido))
-                            #nome = texto.split(" - ")[0]
-                            lista = [nome,produto.nome,produto.modelo,quantidade_alugada,nova_data,local,observacao,telefone,endereco]
-                        lista2.append(lista)
-                        #print(lista2)
+
+
+
+                            for item in lista2:
+
+                                produto_str = f'{produto.nome} - {produto.modelo}'
+                                protuto2_str = f'{item[1]} - {item[2]} '
+
+                                if (produto_str.strip()) == (protuto2_str.strip()):
+                                    salvar = False
+                                    break
+
+                        if salvar:  # Se não encontrou duplicado, adiciona o item à lista
+                            lista = [nome, produto.nome, produto.modelo, quantidade_alugada, nova_data, local,
+                                     observacao, telefone, endereco]
+                            lista2.append(lista)
+                            print("Produto adicionado:", lista)
+                            resultado = 2
+
+                        else:
+                            print("Produto já existe, não adicionado.")
+                            resultado = 3
+
+                        print(lista2)
 
                         for item in lista2:
                             resultado_temporario = (f"{item[1]} - {item[2]} - {item[3]}")
                             lista_itens.append(resultado_temporario)
 
-                        print(lista_itens)
+                        #print(lista_itens)
 
-                        return render(request, 'cadastro_pedido.html', {'form': form,'lista_itens':lista_itens})  # Redirecionar para a página de sucesso após salvar
+                        return render(request, 'cadastro_pedido.html', {'form': form,'lista_itens':lista_itens,'resultado':resultado})  # Redirecionar para a página de sucesso após salvar
                     else:
                         print("Formulário do item não é válido")
             except:

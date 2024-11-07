@@ -16,6 +16,7 @@
     <div class="alert alert-danger" role="alert">
         Falha ao salvar o cadastro
     </div>
+
 {% else %}
 {% endif %}
 <form class="row g-2" method="post">
@@ -73,31 +74,75 @@
 
         <div class="col-2">
             <p></p>
-            <input type="submit" class="btn btn-primary" name="save_itens" value="Salvar Itens">
+            <input type="submit" class="btn btn-primary" name="save_itens" value="Salvar Itens" id="salvarItens">
             <input type="submit" class="btn btn-success" name="save_pedido" value="Salvar Pedido">
         </div>
     </div>
 
 </form>
 
-<table class="table">
-  <thead>
-    <tr>
-      <th scope="col">Produto</th>
-    </tr>
-  </thead>
-   <tbody>
-            {% for item in lista_itens %}
-                <tr>
-                    <td>{{ item }}</td> <!-- Produto -->
-                </tr>
-            {% empty %}
-                <tr>
-                    <td colspan="3">Nenhum item cadastrado</td>
-                </tr>
-            {% endfor %}
-        </tbody>
+{% if resultado == 2 %}
+    <span class="badge text-bg-info">
+        Item Adicionado!!
+    </span>
+{% elif resultado == 3 %}
+    <span class="badge text-bg-warning">
+        Produto já existe, não adicionado!!
+    </span>
+{% endif %}
+
+<div style="margin-top: 10px;" class="col-6 border" >
+<div class="col-12">
+<table class="table ">
+
+    <thead>
+        <tr>
+            <th scope="col">Produto</th>
+            <th scope="col">Ação</th>
+        </tr>
+    </thead>
+
+    <tbody>
+        {% for item in lista_itens %}
+        <tr>
+            <td>{{ item }}</td> <!-- Produto -->
+            <td>ok</td>
+        </tr>
+
+        {% empty %}
+        <tr>
+            <td colspan="3">Nenhum item cadastrado</td>
+        </tr>
+        {% endfor %}
+    </tbody>
 </table>
+</div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // Seleciona os campos e o botão
+        const produtoSelect = document.getElementById('id_itempedido_set-0-produto');
+        const quantidadeInput = document.getElementById('id_itempedido_set-0-quantidade_alugada');
+        const salvarBtn = document.getElementById('salvarItens');
+
+        // Função para verificar se ambos os campos estão preenchidos
+        function verificarCampos() {
+            if (produtoSelect.value && quantidadeInput.value) {
+                salvarBtn.disabled = false; // Habilita o botão
+            } else {
+                salvarBtn.disabled = true; // Desabilita o botão
+            }
+        }
+
+        // Adiciona os eventos de verificação aos campos
+        produtoSelect.addEventListener('change', verificarCampos);
+        quantidadeInput.addEventListener('input', verificarCampos);
+
+        // Chama a função inicialmente para definir o estado do botão
+        verificarCampos();
+    });
+</script>
 
 <script>
 
