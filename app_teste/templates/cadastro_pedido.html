@@ -9,16 +9,16 @@
 </nav>
 
 {% if resultado == 1 %}
-    <div class="alert alert-success" role="alert">
+    <div id="mensagem-alerta" class="alert alert-success" role="alert">
         Pedido salvo com Sucesso
     </div>
 {% elif resultado == 0 %}
-    <div class="alert alert-danger" role="alert">
+    <div id="mensagem-alerta" class="alert alert-danger" role="alert">
         Falha ao salvar o cadastro
     </div>
-
 {% else %}
 {% endif %}
+
 <form class="row g-2" method="post">
 
     <div class="col-8">
@@ -91,7 +91,7 @@
     </span>
 {% endif %}
 
-<div style="margin-top: 10px;" class="col-6 border" >
+<div style="margin-top: 10px;" class="col-6 border" id="tabelaItens" >
 <div class="col-12">
 <table class="table ">
 
@@ -119,6 +119,8 @@
 </div>
 </div>
 
+
+
 <script>
     document.addEventListener("DOMContentLoaded", function() {
         // Seleciona os campos e o botão
@@ -141,6 +143,16 @@
 
         // Chama a função inicialmente para definir o estado do botão
         verificarCampos();
+
+        // Função para rolar até a tabela de itens após o carregamento
+    window.onload = function() {
+        const tabelaItens = document.getElementById('tabelaItens');
+        if (tabelaItens) {
+            tabelaItens.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    };
+
+
     });
 </script>
 
