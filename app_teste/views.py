@@ -229,14 +229,31 @@ def cadastro_pedido(request):
     global lista2
     print (lista2)
     print("")
+    global delete
+    global guarda_valores
+
+    delete = False
 
     lista_itens = []
 
     #print(lista_itens)
-
+    print("passei por aqui")
     if request.method == 'POST':
-        form = PedidoModelForm(request.POST)
-        if 'save_itens' in request.POST:
+        form = PedidoModelForm(request.POST or None)
+        delete = True
+        # Excluir item se delete_index estiver no POST
+        delete_index = request.POST.get('delete_index')
+        if delete_index is not None:
+            delete = True
+            try:
+                delete_index = int(delete_index)
+                if 0 <= delete_index < len(lista2):
+                    del lista2[delete_index]
+                    print(f"Item na posição {delete_index} removido de lista2.")
+            except ValueError:
+                print("Índice de exclusão inválido")
+
+        elif 'save_itens' in request.POST:
             try:
 
                 if form.is_valid():
@@ -258,6 +275,15 @@ def cadastro_pedido(request):
                         endereco = ''
                     if observacao is None:
                         observacao = ''
+
+                    guarda_valores = {
+                        'nome': nome,
+                        'data_de_locacao': nova_data,
+                        'local': local,
+                        'observacao': observacao,
+                        'telefone': telefone,
+                        'endereco': endereco
+                    }
 
 
 
@@ -316,6 +342,7 @@ def cadastro_pedido(request):
                 resultado = 0
 
             form = PedidoModelForm()
+            print("estou apagando aqui 2")
             contexto = {'form': form,'resultado':resultado}
             lista2 = []
 
@@ -324,7 +351,16 @@ def cadastro_pedido(request):
         lista2 = []
         form = PedidoModelForm()
 
-    return render(request, 'cadastro_pedido.html', {'form': form})
+    print(delete)
+    print(lista2)
+    if delete:
+        form = PedidoModelForm(initial=guarda_valores)
+        for item in lista2:
+            resultado_temporario = (f"{item[1]} - {item[2]} - {item[3]}")
+            lista_itens.append(resultado_temporario)
+
+
+    return render(request, 'cadastro_pedido.html', {'form': form,'lista_itens':lista_itens})
 
 def pesquisacliente(request):
     if request.method == 'GET':

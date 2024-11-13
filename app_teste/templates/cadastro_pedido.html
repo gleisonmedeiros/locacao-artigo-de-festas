@@ -103,18 +103,24 @@
     </thead>
 
     <tbody>
-        {% for item in lista_itens %}
-        <tr>
-            <td>{{ item }}</td> <!-- Produto -->
-            <td>ok</td>
-        </tr>
-
-        {% empty %}
-        <tr>
-            <td colspan="3">Nenhum item cadastrado</td>
-        </tr>
-        {% endfor %}
-    </tbody>
+    {% for item in lista_itens %}
+    <tr>
+        <td>{{ item }}</td>
+        <td>
+            <!-- Botão para excluir o item, enviando o índice do item -->
+            <form method="post" action="">
+                {% csrf_token %}
+                <input type="hidden" name="delete_index" value="{{ forloop.counter0 }}">
+                <button type="submit">Excluir</button>
+            </form>
+        </td>
+    </tr>
+    {% empty %}
+    <tr>
+        <td colspan="3">Nenhum item cadastrado</td>
+    </tr>
+    {% endfor %}
+</tbody>
 </table>
 </div>
 </div>
