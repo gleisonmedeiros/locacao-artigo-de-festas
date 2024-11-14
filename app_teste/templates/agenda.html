@@ -41,51 +41,68 @@
                         {% endif %}
                     </div>
 
-                    <form method="POST">
-                        {% csrf_token %}
+                    <!-- Formulários com botões na horizontal -->
+                    <div class="d-flex gap-2">
+                        <!-- Formulário Deletar -->
+                        <form method="POST">
+                            {% csrf_token %}
+                            <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#exampleModal{{ forloop.counter }}">
+                                Deletar
+                            </button>
 
-                        <!-- Button trigger modal -->
-                        <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#exampleModal{{ forloop.counter }}">
-                            Deletar
-                        </button>
+                            <!-- Modal -->
+                            <div class="modal fade" id="exampleModal{{ forloop.counter }}" tabindex="-1" aria-labelledby="exampleModalLabel{{ forloop.counter }}" aria-hidden="true">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h1 class="modal-title fs-5" id="exampleModalLabel">ATENÇÃO</h1>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            Você tem certeza que deseja deletar este pedido?
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Cancelar</button>
 
-                        <!-- Modal -->
-                        <div class="modal fade" id="exampleModal{{ forloop.counter }}" tabindex="-1" aria-labelledby="exampleModalLabel{{ forloop.counter }}" aria-hidden="true">
-                            <div class="modal-dialog">
-                                <div class="modal-content">
-                                    <div class="modal-header">
-                                        <h1 class="modal-title fs-5" id="exampleModalLabel">ATENÇÃO</h1>
-                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                    </div>
-                                    <div class="modal-body">
-                                        Você tem certeza que deseja deletar este pedido?
-                                    </div>
-                                    <div class="modal-footer">
-                                        <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Cancelar</button>
-
-                                        <input type="hidden" name="nome" value="{{ nome }}">
-                                        <input type="hidden" name="data" value="{{ data }}">
-                                        <input type="submit" class="btn btn-danger" name="delete_itens" value="Sim">
+                                            <input type="hidden" name="nome" value="{{ nome }}">
+                                            <input type="hidden" name="data" value="{{ data }}">
+                                            <input type="submit" class="btn btn-danger" name="delete_itens" value="Sim">
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                        <!-- Fim Button trigger modal -->
-                    </form>
+                        </form>
 
+                        <!-- Formulário Editar -->
+                        <form method="POST">
+                            {% csrf_token %}
+
+                            <!-- Campos ocultos para nome e data -->
+                            <input type="hidden" name="nome" value="{{ nome }}">
+                            <input type="hidden" name="data" value="{{ data }}">
+
+                            <!-- Campo oculto para indicar ação de editar -->
+                            <input type="hidden" name="editar_itens" value="true">
+
+                            <!-- Botão Editar -->
+                            <button type="submit" class="btn btn-info">
+                                Editar
+                            </button>
+                        </form>
+                    </div>
+                    <!-- Fim dos botões na horizontal -->
                 </div>
             </div>
         </div>
     {% endfor %}
 </div>
-
 <!-- Mostra o somatório de produtos -->
 <div class="mt-3">
-<b>Somatório de Produtos:</b>
-{% for produto, quantidade in somatorio_produtos.items %}
-    <div>{{ produto }}: {{ quantidade }}</div>
-{% endfor %}
-
+    <b>Somatório de Produtos:</b>
+    {% for produto, quantidade in somatorio_produtos.items %}
+        <div>{{ produto }}: {{ quantidade }}</div>
+    {% endfor %}
+</div>
 <script>
     function toggleProdutos(index) {
         var produtosLimitados = document.getElementById("produtos-limitados-" + index);

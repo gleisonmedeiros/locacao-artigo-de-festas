@@ -8,17 +8,6 @@
     <a class="navbar-brand" href="#">Cadastro do pedido</a>
 </nav>
 
-{% if resultado == 1 %}
-    <div id="mensagem-alerta" class="alert alert-success" role="alert">
-        Pedido salvo com Sucesso
-    </div>
-{% elif resultado == 0 %}
-    <div id="mensagem-alerta" class="alert alert-danger" role="alert">
-        Falha ao salvar o cadastro
-    </div>
-{% else %}
-{% endif %}
-
 <form class="row g-2" method="post">
 
     <div class="col-8">
@@ -80,8 +69,19 @@
     </div>
 
 </form>
-
-{% if resultado == 2 %}
+{% if resultado == 1 %}
+    <div id="mensagem-alerta" class="alert alert-success" role="alert">
+        Pedido salvo com Sucesso
+    </div>
+{% elif resultado == 0 %}
+    <div id="mensagem-alerta" class="alert alert-danger" role="alert">
+        Falha ao salvar o cadastro
+    </div>
+{% elif resultado == 4 %}
+    <div id="mensagem-alerta" class="alert alert-danger" role="alert">
+        Error! Já existe um pedido com o mesmo nome e data de locação!
+    </div>
+{% elif resultado == 2 %}
     <span class="badge text-bg-info">
         Item Adicionado!!
     </span>

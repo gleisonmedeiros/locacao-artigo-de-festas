@@ -104,7 +104,7 @@ def agenda(request):
 
         # Criando a lista de dados para renderizar no template
         lista_dados = [(nome,data,local,observacao, itens,telefone,endereco) for nome, data,local,observacao, itens,telefone,endereco in result]
-
+        print(lista_dados)
         paramentro = False
         if request.GET.get('datainicio'):
             data_inicio = (request.GET.get('datainicio'))
@@ -144,6 +144,36 @@ def agenda(request):
             url_agenda = reverse('agenda') + '?datainicio=' + data_inicio + '&datafim=' + data_fim
             return redirect(url_agenda)
 
+        elif 'editar_itens' in request.POST:
+            print("uiii")
+            nome_cliente = (request.POST['nome'].split(' - ')[0])
+            data = (request.POST['data'].split(' ')[0])
+            data_datetime = datetime.strptime(data, "%d/%m/%Y")
+            data_formatada = data_datetime.strftime("%Y-%m-%d")
+            print(nome_cliente)
+            print(data)
+            pedido = PedidoModel.objects.get(nome=nome_cliente, data_de_locacao=data_formatada)
+
+            # Preenche o formulário com os dados do pedido
+            form = PedidoModelForm(instance=pedido)
+
+            pedidos_itens = ItemPedido.objects.select_related('produto', 'pedido').all()
+
+            itens = []
+            # Preencher o dicionário com os produtos agrupados por cliente
+            for pedido_item in pedidos_itens:
+                if (pedido_item.pedido.nome == nome_cliente):
+                    produto = (pedido_item.produto)
+                    quantidade = (pedido_item.quantidade_alugada)
+                    itens.append(f'{produto} - {quantidade}')
+
+            for item in itens:
+                print(item)
+
+            # Passa os dados para o template
+            #return render(request, 'cadastro_pedido.html',{'form': form, 'lista_itens': lista_itens, 'resultado': resultado})
+            return render(request, 'cadastro_pedido.html',{'form': form,'lista_itens':itens})
+
         elif 'delete_itens' in request.POST:
             nome_cliente = (request.POST['nome'].split(' - ')[0])
             data = (request.POST['data'].split(' ')[0])
@@ -153,8 +183,6 @@ def agenda(request):
             print(data)
             #cliente = Cliente_Model.objects.get(nome=nome_cliente)  # Obtenha o objeto do cliente pelo nome
             pedido = PedidoModel.objects.get(nome=nome_cliente,data_de_locacao=data_formatada)  # Consulte o pedido usando o objeto do cliente
-            print(nome_cliente)
-            print(data)
             pedido.delete()
             return redirect('agenda')
         else:
@@ -257,6 +285,7 @@ def cadastro_pedido(request):
             try:
 
                 if form.is_valid():
+
                     # Salvar pedido principal
                     nome = form.cleaned_data.get('nome')
 
@@ -284,8 +313,6 @@ def cadastro_pedido(request):
                         'telefone': telefone,
                         'endereco': endereco
                     }
-
-
 
                     # Salvar itens do pedido
                     itens_pedido_formset = form.itens_pedido(queryset=ItemPedido.objects.none(), data=request.POST)
@@ -335,18 +362,36 @@ def cadastro_pedido(request):
 
         elif 'save_pedido' in request.POST:
             try:
-                salva_pedido()
+                if form.is_valid():
+                    nome = form.cleaned_data.get('nome')
+                    data = form.cleaned_data.get('data_de_locacao')
+                    nova_data = str(data)
 
-                resultado = 1
+                    # Verificar se já existe um pedido com o mesmo nome e data
+                    if PedidoModel.objects.filter(nome=nome, data_de_locacao=nova_data).exists():
+                        # Caso exista, mostrar uma mensagem de erro
+                        form = PedidoModelForm()
+                        lista2 = []
+                        return render(request, 'cadastro_pedido.html',
+                                      {'form': form, 'lista_itens': lista_itens, 'resultado': 4})
+                    else:
+                        resultado = 1
+                        salva_pedido()
+                        form = PedidoModelForm()
+                        contexto = {'form': form, 'resultado': resultado}
+                        lista2 = []
+
+                        return render(request, 'cadastro_pedido.html', contexto)
+
             except:
                 resultado = 0
 
-            form = PedidoModelForm()
-            print("estou apagando aqui 2")
-            contexto = {'form': form,'resultado':resultado}
-            lista2 = []
+                form = PedidoModelForm()
+                print("estou apagando aqui 2")
+                contexto = {'form': form,'resultado':resultado}
+                lista2 = []
 
-            return render(request, 'cadastro_pedido.html', contexto)
+                return render(request, 'cadastro_pedido.html', contexto)
     elif  request.method == 'GET':
         lista2 = []
         form = PedidoModelForm()
