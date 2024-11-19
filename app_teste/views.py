@@ -10,6 +10,7 @@ from unidecode import unidecode
 from django.urls import reverse
 from collections import defaultdict
 from django.contrib import messages
+import json
 
 locale.setlocale(locale.LC_TIME, 'pt_BR.utf-8')
 
@@ -170,9 +171,13 @@ def agenda(request):
             for item in itens:
                 print(item)
 
+            itens_serializado = json.dumps(itens)
+
+
             # Passa os dados para o template
             #return render(request, 'cadastro_pedido.html',{'form': form, 'lista_itens': lista_itens, 'resultado': resultado})
-            return render(request, 'cadastro_pedido.html',{'form': form,'lista_itens':itens})
+            #return render(request, 'cadastro_pedido.html',{'form': form,'lista_itens':itens})
+            return redirect(f'/cadastro-pedido/?nome={nome_cliente}&data={data_formatada}&itens={itens_serializado}')
 
         elif 'delete_itens' in request.POST:
             nome_cliente = (request.POST['nome'].split(' - ')[0])
@@ -322,8 +327,6 @@ def cadastro_pedido(request):
                             produto = formset_form.cleaned_data.get('produto')
                             quantidade_alugada = formset_form.cleaned_data.get('quantidade_alugada')
 
-
-
                             for item in lista2:
 
                                 produto_str = f'{produto.nome} - {produto.modelo}'
@@ -368,33 +371,84 @@ def cadastro_pedido(request):
                     nova_data = str(data)
 
                     # Verificar se já existe um pedido com o mesmo nome e data
-                    if PedidoModel.objects.filter(nome=nome, data_de_locacao=nova_data).exists():
-                        # Caso exista, mostrar uma mensagem de erro
-                        form = PedidoModelForm()
-                        lista2 = []
-                        return render(request, 'cadastro_pedido.html',
-                                      {'form': form, 'lista_itens': lista_itens, 'resultado': 4})
+                    if 'nome' not in request.GET:
+                        if PedidoModel.objects.filter(nome=nome, data_de_locacao=nova_data).exists():
+                            # Caso exista, mostrar uma mensagem de erro
+                            form = PedidoModelForm()
+                            lista2 = []
+                            return render(request, 'cadastro_pedido.html',
+                                          {'form': form, 'lista_itens': lista_itens, 'resultado': 4})
+                        else:
+                            resultado = 1
+                            salva_pedido()
+                            print(lista2)
+                            form = PedidoModelForm()
+                            contexto = {'form': form, 'resultado': resultado}
+                            lista2 = []
+
                     else:
+                        local = form.cleaned_data.get('local')
+                        observacao = form.cleaned_data.get('observacao')
+                        telefone = form.cleaned_data.get('telefone')
+                        endereco = form.cleaned_data.get('endereco')
+
+                        # Atualizando os dados na lista
+                        for item in lista2:
+                            # Atualiza o nome (índice 0)
+                            item[0] = nome  # Atualiza o nome (índice 0)
+
+                            # Atualizar a data e o local
+                            item[4] = nova_data  # Atualiza a data de locação (índice 4)
+                            item[5] = local  # Atualiza o local (índice 5)
+
+                            # Atualizar observação, telefone e endereço
+                            item[6] = observacao  # Atualiza a observação (índice 6)
+                            item[7] = telefone  # Atualiza o telefone (índice 7)
+                            item[8] = endereco  # Atualiza o endereço (índice 8)
+                        pedido = PedidoModel.objects.get(nome=nome,data_de_locacao=data)
+                        pedido.delete()
+                        print(lista2)
                         resultado = 1
                         salva_pedido()
                         form = PedidoModelForm()
                         contexto = {'form': form, 'resultado': resultado}
                         lista2 = []
+                        print(lista2)
 
-                        return render(request, 'cadastro_pedido.html', contexto)
+                    return render(request, 'cadastro_pedido.html', contexto)
 
-            except:
+            except Exception as e:
                 resultado = 0
 
                 form = PedidoModelForm()
                 print("estou apagando aqui 2")
                 contexto = {'form': form,'resultado':resultado}
                 lista2 = []
+                print(f'Erro: {e}')
 
                 return render(request, 'cadastro_pedido.html', contexto)
+
     elif  request.method == 'GET':
-        lista2 = []
-        form = PedidoModelForm()
+        if request.GET:
+            print("Encontrado parametro")
+            nome = request.GET['nome']
+            data = request.GET['data']
+            itens_serializado = request.GET.get('itens', '[]')
+            lista_itens = json.loads(itens_serializado)
+            print(lista_itens)
+            #print(data)
+            pedido = PedidoModel.objects.get(nome=nome, data_de_locacao=data)
+
+            # Preenche o formulário com os dados do pedido
+            form = PedidoModelForm(instance=pedido)
+            lista2 = []
+
+            for item in lista_itens:
+                temp = [item.strip() for item in item.split('-')]
+                lista2.append([pedido.nome,temp[0],temp[1],temp[2],data,pedido.local,pedido.observacao,pedido.telefone,pedido.endereco])
+        else:
+            lista2 = []
+            form = PedidoModelForm()
 
     print(delete)
     print(lista2)
