@@ -392,6 +392,15 @@ def cadastro_pedido(request):
                         telefone = form.cleaned_data.get('telefone')
                         endereco = form.cleaned_data.get('endereco')
 
+                        guarda_valores = {
+                            'nome': nome,
+                            'data_de_locacao': nova_data,
+                            'local': local,
+                            'observacao': observacao,
+                            'telefone': telefone,
+                            'endereco': endereco
+                        }
+
                         # Atualizando os dados na lista
                         for item in lista2:
                             # Atualiza o nome (índice 0)
@@ -453,6 +462,27 @@ def cadastro_pedido(request):
     print(delete)
     print(lista2)
     if delete:
+
+        print(lista2)
+
+        nome = lista2[0][0]
+        data = lista2[0][4]
+        nova_data = str(data)
+        local = lista2[0][5]
+        observacao = lista2[0][6]
+        telefone = lista2[0][7]
+        endereco = lista2[0][8]
+
+        guarda_valores = {
+            'nome': nome,
+            'data_de_locacao': nova_data,
+            'local': local,
+            'observacao': observacao,
+            'telefone': telefone,
+            'endereco': endereco
+        }
+
+
         form = PedidoModelForm(initial=guarda_valores)
         for item in lista2:
             resultado_temporario = (f"{item[1]} - {item[2]} - {item[3]}")
