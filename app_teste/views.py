@@ -15,6 +15,8 @@ import json
 locale.setlocale(locale.LC_TIME, 'pt_BR.utf-8')
 
 lista2 = []
+nome_antigo = ""
+data_antigo = ""
 
 def listar_produtos(request):
     query = request.GET.get('search')
@@ -77,6 +79,9 @@ def agenda(request):
             dia_da_semana = unidecode((data_formatada.strftime("%A").capitalize()))
             if (dia_da_semana == 'Sa!bado'):
                 dia_da_semana = 'Sábado'
+            elif (dia_da_semana == 'TeraSSa-feira'):
+                dia_da_semana = 'Terça-feira'
+
             ano, mes, dia = data.split('-')
             data_locacao =f'{dia}/{mes}/{ano} - {dia_da_semana}'
             local=(pedido_item.pedido.local)
@@ -105,7 +110,7 @@ def agenda(request):
 
         # Criando a lista de dados para renderizar no template
         lista_dados = [(nome,data,local,observacao, itens,telefone,endereco) for nome, data,local,observacao, itens,telefone,endereco in result]
-        print(lista_dados)
+        #print(lista_dados)
         paramentro = False
         if request.GET.get('datainicio'):
             data_inicio = (request.GET.get('datainicio'))
@@ -130,7 +135,7 @@ def agenda(request):
                     produto_nome = item[0]  # Acessando o nome do produto
                     quantidade_alugada = item[1]  # Acessando a quantidade
                     somatorio_produtos[produto_nome] += quantidade_alugada
-            print(somatorio_produtos)
+            #print(somatorio_produtos)
             return render(request, 'agenda.html', {'lista_dados': lista_filtrada, 'form': form_date,'somatorio_produtos': dict(somatorio_produtos)})
 
 
@@ -146,13 +151,13 @@ def agenda(request):
             return redirect(url_agenda)
 
         elif 'editar_itens' in request.POST:
-            print("uiii")
+            #print("uiii")
             nome_cliente = (request.POST['nome'].split(' - ')[0])
             data = (request.POST['data'].split(' ')[0])
             data_datetime = datetime.strptime(data, "%d/%m/%Y")
             data_formatada = data_datetime.strftime("%Y-%m-%d")
-            print(nome_cliente)
-            print(data)
+            #print(nome_cliente)
+            #print(data)
             pedido = PedidoModel.objects.get(nome=nome_cliente, data_de_locacao=data_formatada)
 
             # Preenche o formulário com os dados do pedido
@@ -160,16 +165,19 @@ def agenda(request):
 
             pedidos_itens = ItemPedido.objects.select_related('produto', 'pedido').all()
 
+
             itens = []
             # Preencher o dicionário com os produtos agrupados por cliente
             for pedido_item in pedidos_itens:
-                if (pedido_item.pedido.nome == nome_cliente):
+                print(pedido_item.pedido.data_de_locacao)
+                print(data)
+                if (pedido_item.pedido.nome == nome_cliente) and (pedido_item.pedido.data_de_locacao == data_formatada):
                     produto = (pedido_item.produto)
                     quantidade = (pedido_item.quantidade_alugada)
                     itens.append(f'{produto} - {quantidade}')
 
-            for item in itens:
-                print(item)
+            #for item in itens:
+                #print(item)
 
             itens_serializado = json.dumps(itens)
 
@@ -184,14 +192,14 @@ def agenda(request):
             data = (request.POST['data'].split(' ')[0])
             data_datetime = datetime.strptime(data, "%d/%m/%Y")
             data_formatada = data_datetime.strftime("%Y-%m-%d")
-            print(nome_cliente)
-            print(data)
+            #print(nome_cliente)
+            #print(data)
             #cliente = Cliente_Model.objects.get(nome=nome_cliente)  # Obtenha o objeto do cliente pelo nome
             pedido = PedidoModel.objects.get(nome=nome_cliente,data_de_locacao=data_formatada)  # Consulte o pedido usando o objeto do cliente
             pedido.delete()
             return redirect('agenda')
         else:
-            print('erro no POST')
+            #print('erro no POST')
             return redirect('agenda')
 
 
@@ -255,22 +263,24 @@ def salva_pedido():
         item1 = ItemPedido(produto=produto1, quantidade_alugada=lista[3], pedido=pedido)
         item1.save()
 
-        print(item1)
+        #print(item1)
 
 
 def cadastro_pedido(request):
     global lista2
-    print (lista2)
-    print("")
+    #print (lista2)
+    #print("")
     global delete
     global guarda_valores
+    global nome_antigo
+    global data_antigo
 
     delete = False
 
     lista_itens = []
 
     #print(lista_itens)
-    print("passei por aqui")
+    #print("passei por aqui")
     if request.method == 'POST':
         form = PedidoModelForm(request.POST or None)
         delete = True
@@ -282,7 +292,7 @@ def cadastro_pedido(request):
                 delete_index = int(delete_index)
                 if 0 <= delete_index < len(lista2):
                     del lista2[delete_index]
-                    print(f"Item na posição {delete_index} removido de lista2.")
+                    #print(f"Item na posição {delete_index} removido de lista2.")
             except ValueError:
                 print("Índice de exclusão inválido")
 
@@ -340,14 +350,14 @@ def cadastro_pedido(request):
                             lista = [nome, produto.nome, produto.modelo, quantidade_alugada, nova_data, local,
                                      observacao, telefone, endereco]
                             lista2.append(lista)
-                            print("Produto adicionado:", lista)
+                            #print("Produto adicionado:", lista)
                             resultado = 2
 
                         else:
                             print("Produto já existe, não adicionado.")
                             resultado = 3
 
-                        print(lista2)
+                        #print(lista2)
 
                         for item in lista2:
                             resultado_temporario = (f"{item[1]} - {item[2]} - {item[3]}")
@@ -381,7 +391,7 @@ def cadastro_pedido(request):
                         else:
                             resultado = 1
                             salva_pedido()
-                            print(lista2)
+                            #print(lista2)
                             form = PedidoModelForm()
                             contexto = {'form': form, 'resultado': resultado}
                             lista2 = []
@@ -414,15 +424,16 @@ def cadastro_pedido(request):
                             item[6] = observacao  # Atualiza a observação (índice 6)
                             item[7] = telefone  # Atualiza o telefone (índice 7)
                             item[8] = endereco  # Atualiza o endereço (índice 8)
-                        pedido = PedidoModel.objects.get(nome=nome,data_de_locacao=data)
+                        #pedido = PedidoModel.objects.get(nome=nome,data_de_locacao=data)
+                        pedido = PedidoModel.objects.get(nome=nome_antigo, data_de_locacao=data_antigo)
                         pedido.delete()
-                        print(lista2)
+                        #print(lista2)
                         resultado = 1
                         salva_pedido()
                         form = PedidoModelForm()
                         contexto = {'form': form, 'resultado': resultado}
                         lista2 = []
-                        print(lista2)
+                        #print(lista2)
 
                     return render(request, 'cadastro_pedido.html', contexto)
 
@@ -430,7 +441,7 @@ def cadastro_pedido(request):
                 resultado = 0
 
                 form = PedidoModelForm()
-                print("estou apagando aqui 2")
+                #print("estou apagando aqui 2")
                 contexto = {'form': form,'resultado':resultado}
                 lista2 = []
                 print(f'Erro: {e}')
@@ -438,13 +449,18 @@ def cadastro_pedido(request):
                 return render(request, 'cadastro_pedido.html', contexto)
 
     elif  request.method == 'GET':
+
         if request.GET:
             print("Encontrado parametro")
             nome = request.GET['nome']
             data = request.GET['data']
+            nome_antigo = request.GET['nome']
+            data_antigo = request.GET['data']
+            print(nome_antigo)
+            print(data_antigo)
             itens_serializado = request.GET.get('itens', '[]')
             lista_itens = json.loads(itens_serializado)
-            print(lista_itens)
+            #print(lista_itens)
             #print(data)
             pedido = PedidoModel.objects.get(nome=nome, data_de_locacao=data)
 
@@ -459,11 +475,11 @@ def cadastro_pedido(request):
             lista2 = []
             form = PedidoModelForm()
 
-    print(delete)
-    print(lista2)
+    #print(delete)
+    #print(lista2)
     if delete:
 
-        print(lista2)
+        #print(lista2)
 
         nome = lista2[0][0]
         data = lista2[0][4]
