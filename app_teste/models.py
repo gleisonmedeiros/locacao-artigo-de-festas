@@ -26,7 +26,7 @@ class PedidoModel(models.Model):
     telefone = models.CharField(max_length=80, blank=True, null=True,default='')
     endereco = models.CharField(max_length=100,blank=True, null=True,default='')
     local = models.CharField(max_length=200, blank=True, null=True,default='')
-    itens_pedido = models.ManyToManyField('ItemPedido',blank=True, null=True)  # Use aspas para evitar referência circular
+    itens_pedido = models.ManyToManyField('ItemPedido',blank=True)  # Use aspas para evitar referência circular
     data_de_locacao = models.CharField(max_length=10,null=True)
     observacao = models.CharField(max_length=400,null=True,blank=True,default='')
     def __str__(self):
