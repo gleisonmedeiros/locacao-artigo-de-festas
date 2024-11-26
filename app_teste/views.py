@@ -523,3 +523,35 @@ def cadastro_pedido(request):
 def pesquisacliente(request):
     if request.method == 'GET':
         return render(request, 'pesquisa_cliente.html', {})
+
+"""
+from django.core.management.base import BaseCommand
+import os
+import subprocess
+
+class Command(BaseCommand):
+    help = 'Faz backup dos dados, converte para UTF-8 e importa para o banco de dados'
+
+    def handle(self, *args, **kwargs):
+        # Passo 1: Fazer backup usando dumpdata
+        backup_file = 'backup.json'
+        self.stdout.write(self.style.SUCCESS('Fazendo backup dos dados...'))
+        subprocess.run(['python', 'manage.py', 'dumpdata'], stdout=open(backup_file, 'w', encoding='utf-16'))
+
+        # Passo 2: Converter de UTF-16 para UTF-8
+        self.stdout.write(self.style.SUCCESS('Convertendo arquivo para UTF-8...'))
+        with open(backup_file, 'r', encoding='utf-16') as file:
+            content = file.read()
+
+        backup_utf8_file = 'backup_utf8.json'
+        with open(backup_utf8_file, 'w', encoding='utf-8') as file:
+            file.write(content)
+
+        self.stdout.write(self.style.SUCCESS(f'Arquivo convertido para UTF-8: {backup_utf8_file}'))
+
+        # Passo 3: Importar os dados usando loaddata
+        self.stdout.write(self.style.SUCCESS('Importando dados para o banco de dados...'))
+        subprocess.run(['python', 'manage.py', 'loaddata', backup_utf8_file])
+
+        self.stdout.write(self.style.SUCCESS('Backup e importação concluídos com sucesso!'))
+"""
