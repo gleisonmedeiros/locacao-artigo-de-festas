@@ -135,8 +135,21 @@ def agenda(request):
                     produto_nome = item[0]  # Acessando o nome do produto
                     quantidade_alugada = item[1]  # Acessando a quantidade
                     somatorio_produtos[produto_nome] += quantidade_alugada
-            #print(somatorio_produtos)
-            return render(request, 'agenda.html', {'lista_dados': lista_filtrada, 'form': form_date,'somatorio_produtos': dict(somatorio_produtos)})
+
+            novo_resultado = []
+
+            for produto, quantidade in somatorio_produtos.items():
+                print(f"Nome: {produto.nome}")
+                print(f"Modelo: {produto.modelo}")
+                print(f"Quantidade: {quantidade}")
+                qtd_produto = Produto_Model.objects.get(nome=produto.nome, modelo=produto.modelo)
+                print(qtd_produto.quantidade)
+                novo_resultado.append([produto.nome,produto.modelo,quantidade,qtd_produto.quantidade-quantidade])
+
+            for item in novo_resultado:
+                print(item)
+
+            return render(request, 'agenda.html', {'lista_dados': lista_filtrada, 'form': form_date,'novo_resultado': novo_resultado})
 
 
 

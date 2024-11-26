@@ -17,12 +17,11 @@
             <div class="card" style="width: 25rem;">
                 <div class="card-body">
                     <h5 class="card-title">{{ nome }}</h5>
-
-                    <div class="card-text"><b>Telefone: </b>{{ telefone }}</div>
+                    <div class="card-text"><b>Telefone: </b>{% if telefone %}{{ telefone }}{% endif %}</div>
                     <div class="card-text"><b>Data de Locação: </b>{{ data }}</div>
-                    <div class="card-text"><b>Endereço: </b>{{ endereco }}</div>
-                    <div class="card-text"><b>Local: </b>{{ local }}</div>
-                    <div class="card-text"><b>Observação: </b>{{ observacao }}</div>
+                    <div class="card-text"><b>Endereço: </b>{% if endereco %}{{ endereco }}{% endif %}</div>
+                    <div class="card-text"><b>Local: </b>{% if local %}{{ local }}{% endif %}</div>
+                    <div class="card-text"><b>Observação: </b>{% if observacao %}{{ observacao }}{% endif %}</div>
 
                     <div class="card-text">
                         <b>Produtos:</b>
@@ -98,10 +97,15 @@
 </div>
 <!-- Mostra o somatório de produtos -->
 <div class="mt-3">
-    <b>Somatório de Produtos:</b>
-    {% for produto, quantidade in somatorio_produtos.items %}
-        <div>{{ produto }}: {{ quantidade }}</div>
-    {% endfor %}
+    <b>Detalhes dos Produtos:</b>
+    <br>
+    <div>
+        {% for item in novo_resultado %}
+            <div>
+                <p><strong>{{ item.0 }} - {{ item.1 }}:</strong> {{ item.2 }}  |  <strong>Restam:</strong> {{ item.3 }}</p>
+            </div>
+        {% endfor %}
+    </div>
 </div>
 <script>
     function toggleProdutos(index) {
