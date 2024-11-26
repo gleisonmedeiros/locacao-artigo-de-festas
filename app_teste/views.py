@@ -530,7 +530,7 @@ import os
 import subprocess
 
 class Command(BaseCommand):
-    help = 'Faz backup dos dados, converte para UTF-8 e importa para o banco de dados'
+    help = 'Faz backup dos dados, limpa o banco, converte para UTF-8 e importa para o banco de dados'
 
     def handle(self, *args, **kwargs):
         # Passo 1: Fazer backup usando dumpdata
@@ -549,9 +549,13 @@ class Command(BaseCommand):
 
         self.stdout.write(self.style.SUCCESS(f'Arquivo convertido para UTF-8: {backup_utf8_file}'))
 
-        # Passo 3: Importar os dados usando loaddata
+        # Passo 3: Limpar o banco de dados (zerar as tabelas)
+        self.stdout.write(self.style.SUCCESS('Limpando o banco de dados...'))
+        subprocess.run(['python', 'manage.py', 'flush', '--no-input'])
+
+        # Passo 4: Importar os dados usando loaddata
         self.stdout.write(self.style.SUCCESS('Importando dados para o banco de dados...'))
         subprocess.run(['python', 'manage.py', 'loaddata', backup_utf8_file])
 
-        self.stdout.write(self.style.SUCCESS('Backup e importação concluídos com sucesso!'))
+        self.stdout.write(self.style.SUCCESS('Backup, limpeza e importação concluídos com sucesso!'))
 """
