@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'app_teste',
+    'pipeline',
 ]
 
 MIDDLEWARE = [
@@ -121,7 +122,57 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
+STATICFILES_DIRS = [
+    BASE_DIR / 'static',  # Pasta onde os arquivos estão localmente
+]
+
+# Diretório onde o Django armazenará os arquivos coletados
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+PIPELINE = {
+    'JS': {
+        'jquery': {
+            'source_filenames': (
+                'https://code.jquery.com/jquery-3.6.4.min.js',  # CDN do jQuery
+            ),
+            'output_filename': 'js/jquery.min.js',  # Arquivo gerado
+        },
+        'bootstrap': {
+            'source_filenames': (
+                'https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js',  # CDN do Bootstrap
+            ),
+            'output_filename': 'js/bootstrap.bundle.min.js',
+        },
+        'inputmask': {
+            'source_filenames': (
+                'https://cdnjs.cloudflare.com/ajax/libs/inputmask/5.0.9/jquery.inputmask.min.js',  # CDN do Inputmask
+            ),
+            'output_filename': 'js/jquery.inputmask.min.js',
+        },
+        'jquery_ui': {
+            'source_filenames': (
+                'https://code.jquery.com/ui/1.12.1/jquery-ui.js',  # CDN do jQuery UI
+            ),
+            'output_filename': 'js/jquery-ui.min.js',
+        },
+    },
+    'CSS': {
+        'bootstrap': {
+            'source_filenames': (
+                'https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css',  # CDN do Bootstrap
+            ),
+            'output_filename': 'css/bootstrap.min.css',
+        },
+        'jquery_ui': {
+            'source_filenames': (
+                'https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css',  # CDN do jQuery UI
+            ),
+            'output_filename': 'css/jquery-ui.min.css',
+        },
+    },
+}
