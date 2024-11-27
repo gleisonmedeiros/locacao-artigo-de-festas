@@ -11,6 +11,10 @@ from django.urls import reverse
 from collections import defaultdict
 from django.contrib import messages
 import json
+import os
+import subprocess
+from django.shortcuts import render
+from django.core.files.storage import FileSystemStorage
 
 locale.setlocale(locale.LC_TIME, 'pt_BR.utf-8')
 
@@ -182,8 +186,8 @@ def agenda(request):
             itens = []
             # Preencher o dicionário com os produtos agrupados por cliente
             for pedido_item in pedidos_itens:
-                print(pedido_item.pedido.data_de_locacao)
-                print(data)
+                #print(pedido_item.pedido.data_de_locacao)
+                #print(data)
                 if (pedido_item.pedido.nome == nome_cliente) and (pedido_item.pedido.data_de_locacao == data_formatada):
                     produto = (pedido_item.produto)
                     quantidade = (pedido_item.quantidade_alugada)
@@ -520,10 +524,125 @@ def cadastro_pedido(request):
 
     return render(request, 'cadastro_pedido.html', {'form': form,'lista_itens':lista_itens})
 
-def pesquisacliente(request):
-    if request.method == 'GET':
-        return render(request, 'pesquisa_cliente.html', {})
 
+def handle_uploaded_file(f):
+    # Caminho absoluto para a raiz do projeto
+    project_root = os.getcwd()
+    file_path = os.path.join(project_root, 'backup_utf8.json')
+
+    # Salva o arquivo no caminho especificado
+    with open(file_path, 'wb+') as destination:
+        for chunk in f.chunks():
+            destination.write(chunk)
+
+def backup_view(request):
+    if request.method == 'GET':
+        # Renderiza a página com os botões de backup
+        return render(request, 'backup.html')
+
+    if request.method == 'POST':
+        backup_file = 'backup.json'
+        backup_utf8_file = 'backup_utf8.json'
+        comando = (request.POST.get('action'))
+        # Verificar qual botão foi pressionado com base no nome
+        if 'download' == comando:
+            # Caminho do arquivo de backup
+
+            print("entrei aqui")
+
+            try:
+                # Passo 1: Gerar backup com dumpdata
+                with open(backup_file, 'w', encoding='utf-16') as file:
+                    subprocess.run(['python', 'manage.py', 'dumpdata'], stdout=file, check=True)
+
+                # Passo 2: Verificar se o arquivo de backup foi gerado
+                if not os.path.exists(backup_file):
+                    raise FileNotFoundError(f"O arquivo de backup {backup_file} não foi encontrado.")
+                else:
+                    print("O arquivo de backup foi encontrado.")
+
+                # Passo 3: Converter o backup para UTF-8
+                # Abrindo o arquivo ANSI e lendo seu conteúdo
+                with open(backup_file, 'r', encoding='mbcs') as file_ansi:
+                    content = file_ansi.read()
+
+                # Salvando o conteúdo no formato UTF-8
+                with open('backup_utf8.json', 'w', encoding='utf-8') as file_utf8:
+                    file_utf8.write(content)
+
+                # Passo 4: Verificar se o arquivo de backup UTF-8 foi gerado
+                if not os.path.exists(backup_utf8_file):
+                    raise FileNotFoundError(f"O arquivo de backup UTF-8 {backup_utf8_file} não foi encontrado.")
+
+                # Passo 5: Retornar o arquivo para download
+                with open(backup_utf8_file, 'rb') as file:
+                    # Criando a resposta HTTP para o download
+                    response = HttpResponse(file.read(), content_type='application/json')
+                    # Forçar o download com Content-Disposition
+                    response['Content-Disposition'] = f'attachment; filename="{backup_utf8_file}"'
+                    return response
+            except Exception as e:
+                # Redireciona para a página com mensagem de erro
+                return render(request, 'backup.html', {'error': str(e)})
+
+        elif comando == 'upload' and request.FILES.get('backup_file'):
+
+            backup_file = request.FILES['backup_file']
+
+            # Salva o arquivo na raiz do projeto
+            handle_uploaded_file(backup_file)
+
+            print("Entrei aqui")
+
+            backup_utf8_file = 'backup_utf8.json'
+
+            try:
+
+                # Passo 3: Limpar o banco de dados
+
+                subprocess.run(['python', 'manage.py', 'flush', '--no-input'], check=True)
+                #subprocess.run(['python', 'manage.py', 'flush', '--no-input'], check=True)
+
+                # Passo 4: Importar os dados para o banco de dados usando loaddata
+
+                subprocess.run(['python', 'manage.py', 'loaddata', backup_utf8_file], check=True)
+
+                # Passo 5: Retornar uma mensagem de sucesso
+
+                return render(request, 'backup.html', {'success': 'Backup importado com sucesso!'})
+
+
+            except subprocess.CalledProcessError as e:
+
+                # Em caso de erro no subprocesso, renderiza a página de backup com uma mensagem de erro
+
+                return render(request, 'backup.html', {'error': f'Ocorreu um erro ao executar o comando: {str(e)}'})
+
+
+            except Exception as e:
+
+                # Qualquer outro erro inesperado
+
+                return render(request, 'backup.html', {'error': f'Erro inesperado: {str(e)}'})
+
+            # Se não for uma requisição POST ou o comando não for 'upload', renderiza o formulário
+
+            # Limpar arquivos temporários
+            if os.path.exists(backup_file):
+                os.remove(backup_file)
+            if os.path.exists(backup_utf8_file):
+                os.remove(backup_utf8_file)
+            return render(request, 'backup.html')
+"""
+            finally:
+                # Limpar arquivos temporários
+                if os.path.exists(backup_file_path):
+                    os.remove(backup_file_path)
+                if os.path.exists(backup_utf8_file):
+                    os.remove(backup_utf8_file)
+
+    return render(request, 'backup.html')
+"""
 """
 from django.core.management.base import BaseCommand
 import os

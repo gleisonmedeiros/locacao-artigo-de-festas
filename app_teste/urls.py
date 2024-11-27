@@ -4,9 +4,11 @@ from .views import (ola_mundo,
                     cadastro_cliente,
                     cadastro_pedido,
                     cadastro_produto,
-                    agenda, pesquisacliente,
+                    agenda, backup_view,
                     listar_produtos,
                     excluir_produto)
+from django.conf import settings
+from django.conf.urls.static import static
 
 urlpatterns = [
     path('ola-mundo/', ola_mundo, name='ola_mundo'),
@@ -17,6 +19,6 @@ urlpatterns = [
     path('cadastro-produto/<int:produto_id>/', cadastro_produto, name='editar_produto'),  # Rota para editar
     path('excluir-produto/<int:produto_id>/', excluir_produto, name='excluir_produto'),
     path('agenda/', agenda, name='agenda'),
-    path('pesquisacliente/', pesquisacliente, name='pesquisacliente'),
+    path('backup_view/', backup_view, name='backup_view'),
     path('listar_produtos/', listar_produtos, name='listar_produtos'),
-]
+] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

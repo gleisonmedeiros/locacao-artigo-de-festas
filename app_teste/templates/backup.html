@@ -1,0 +1,31 @@
+{% extends 'index.html' %}
+
+{% block content %}
+
+<nav class="navbar" style="margin-top: 50px;">
+  <a class="navbar-brand" href="#">Backup do Banco:</a>
+</nav>
+
+<form method="post" enctype="multipart/form-data">
+  {% csrf_token %}
+  {{ form.as_p }}
+
+  <!-- Botão Download -->
+  <button type="submit" name="action" value="download" class="btn btn-info">
+    Download Backup
+  </button>
+
+  <div style="margin-top: 20px;"></div>
+
+  <!-- Campo de upload (só obrigatório para o upload) -->
+  <label for="backup_file">Escolha o arquivo de backup (JSON):</label><br><br>
+  <input type="file" name="backup_file" id="backup_file" {% if request.POST.action == "upload" %} required {% endif %}>
+
+  <!-- Botão Upload -->
+  <button type="submit" name="action" value="upload" class="btn btn-info">
+    Upload Backup
+  </button>
+
+</form>
+
+{% endblock %}
