@@ -8,8 +8,12 @@
         {% csrf_token %}
         {{ form.as_p }}
         <input type="submit" class="btn btn-light" name="pesquisar" value="Pesquisar">
+        <div style="flex-grow: 1;"></div>
+        <input type="submit" class="btn btn-warning" name="imprimir" value="Imprimir">
     </div>
 </form>
+
+
 
 <div class="row">
     {% for nome, data, local, observacao, itens, telefone, endereco in lista_dados %}

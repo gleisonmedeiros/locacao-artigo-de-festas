@@ -15,6 +15,15 @@ import os
 import subprocess
 from django.shortcuts import render
 from django.core.files.storage import FileSystemStorage
+import time
+
+from reportlab.lib.pagesizes import letter,landscape
+from reportlab.lib import colors
+from reportlab.pdfgen import canvas
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
 
 locale.setlocale(locale.LC_TIME, 'pt_BR.utf-8')
 
@@ -125,9 +134,37 @@ def agenda(request):
             data_fim_formatada = datetime.strptime(data_fim, "%Y-%m-%d").date()
             paramentro = True
 
+            form_date = DateRangeForm(request.POST or None, initial={'data_inicio': data_inicio, 'data_fim': data_fim})
+
         # Lista de dados filtrados com base na data alvo
             lista_filtrada = [(nome, data, local, observacao, itens, telefone, endereco) for nome, data, local, observacao, itens, telefone,endereco in lista_dados
                           if (formata_data(data) >= data_inicio_formatada) and ((formata_data(data) <= data_fim_formatada))]
+
+            #print(lista_filtrada)
+            if request.GET.get('pesquisar'):
+                print("entreeiii")
+                gerar_pdf(lista_filtrada)
+
+                arquivo = "pedido_relatorio.pdf"
+                foi = False
+                while foi == False:
+                    if is_file_in_use(arquivo):
+                        print(f"O arquivo {arquivo} está em uso.")
+                        time.sleep(1)
+                    else:
+                        print(f"O arquivo {arquivo} não está em uso.")
+                        foi = True
+
+                if not os.path.exists(arquivo):
+                    print(f"O arquivo {arquivo} não foi encontrado.")
+
+                # Retornar o arquivo PDF para o download
+                with open(arquivo, 'rb') as file:
+                    # Criando a resposta HTTP para o download
+                    response = HttpResponse(file.read(), content_type='application/pdf')
+                    # Forçar o download com Content-Disposition
+                    response['Content-Disposition'] = f'attachment; filename="{arquivo}"'
+                    return response
 
         if(paramentro == False):
             return render(request, 'agenda.html', {'lista_dados': lista_dados, 'form':form_date})
@@ -143,15 +180,13 @@ def agenda(request):
             novo_resultado = []
 
             for produto, quantidade in somatorio_produtos.items():
-                print(f"Nome: {produto.nome}")
-                print(f"Modelo: {produto.modelo}")
-                print(f"Quantidade: {quantidade}")
+                #print(f"Nome: {produto.nome}")
+                #print(f"Modelo: {produto.modelo}")
+                #print(f"Quantidade: {quantidade}")
                 qtd_produto = Produto_Model.objects.get(nome=produto.nome, modelo=produto.modelo)
-                print(qtd_produto.quantidade)
+                #print(qtd_produto.quantidade)
                 novo_resultado.append([produto.nome,produto.modelo,quantidade,qtd_produto.quantidade-quantidade])
 
-            for item in novo_resultado:
-                print(item)
 
             return render(request, 'agenda.html', {'lista_dados': lista_filtrada, 'form': form_date,'novo_resultado': novo_resultado})
 
@@ -215,6 +250,15 @@ def agenda(request):
             pedido = PedidoModel.objects.get(nome=nome_cliente,data_de_locacao=data_formatada)  # Consulte o pedido usando o objeto do cliente
             pedido.delete()
             return redirect('agenda')
+        elif 'imprimir' in request.POST:
+            print("passei por aqui")
+            data_inicio = form_date.cleaned_data['data_inicio'].strftime('%Y-%m-%d')
+            data_fim = form_date.cleaned_data['data_fim'].strftime('%Y-%m-%d')
+            valor = '1'
+            url_agenda = reverse('agenda') + '?datainicio=' + data_inicio + '&datafim=' + data_fim + '&pesquisar='+ valor
+            return redirect(url_agenda)
+
+
         else:
             #print('erro no POST')
             return redirect('agenda')
@@ -474,8 +518,8 @@ def cadastro_pedido(request):
             data = request.GET['data']
             nome_antigo = request.GET['nome']
             data_antigo = request.GET['data']
-            print(nome_antigo)
-            print(data_antigo)
+            #print(nome_antigo)
+            #print(data_antigo)
             itens_serializado = request.GET.get('itens', '[]')
             lista_itens = json.loads(itens_serializado)
             #print(lista_itens)
@@ -637,48 +681,104 @@ def backup_view(request):
         else:
             resultado = 0
             return render(request, 'backup.html',{'resultado':resultado})
-"""
-            finally:
-                # Limpar arquivos temporários
-                if os.path.exists(backup_file_path):
-                    os.remove(backup_file_path)
-                if os.path.exists(backup_utf8_file):
-                    os.remove(backup_utf8_file)
 
-    return render(request, 'backup.html')
-"""
-"""
-from django.core.management.base import BaseCommand
-import os
-import subprocess
+def is_file_in_use(file_path):
+    try:
+        # Tentar abrir o arquivo no modo exclusivo (somente para leitura)
+        with open(file_path, 'rb'):
+            return False  # Se conseguiu abrir, o arquivo não está em uso
+    except IOError:
+        # Se ocorreu um erro ao abrir o arquivo, provavelmente está em uso
+        return True
 
-class Command(BaseCommand):
-    help = 'Faz backup dos dados, limpa o banco, converte para UTF-8 e importa para o banco de dados'
+def gerar_pdf(lista_filtrada):
+    # Criando o PDF com o tamanho da página A4 (landscape)
+    pdf_file = "pedido_relatorio_horizontal.pdf"
+    c = canvas.Canvas(pdf_file, pagesize=landscape(letter))  # Usando paisagem (landscape)
 
-    def handle(self, *args, **kwargs):
-        # Passo 1: Fazer backup usando dumpdata
-        backup_file = 'backup.json'
-        self.stdout.write(self.style.SUCCESS('Fazendo backup dos dados...'))
-        subprocess.run(['python', 'manage.py', 'dumpdata'], stdout=open(backup_file, 'w', encoding='utf-16'))
+    # Definir margens e espaçamento
+    margin_left = 40
+    margin_top = 550  # Ajuste para começar mais alto devido à largura maior
+    column_width = 130  # Diminuindo a largura de cada coluna
+    line_height = 15  # altura de cada linha
+    current_y = margin_top
 
-        # Passo 2: Converter de UTF-16 para UTF-8
-        self.stdout.write(self.style.SUCCESS('Convertendo arquivo para UTF-8...'))
-        with open(backup_file, 'r', encoding='utf-16') as file:
-            content = file.read()
+    # Caminhos para as fontes .ttf
+    font_path_regular = r"calibri.ttf"  # Caminho para a fonte regular
+    font_path_bold = r"calibri-bold.ttf"  # Caminho para a fonte negrito
 
-        backup_utf8_file = 'backup_utf8.json'
-        with open(backup_utf8_file, 'w', encoding='utf-8') as file:
-            file.write(content)
+    # Registrar as fontes
+    pdfmetrics.registerFont(TTFont('Calibri', font_path_regular))
+    pdfmetrics.registerFont(TTFont('Calibri-Bold', font_path_bold))
 
-        self.stdout.write(self.style.SUCCESS(f'Arquivo convertido para UTF-8: {backup_utf8_file}'))
+    # Adicionando título no topo
+    c.setFont("Helvetica-Bold", 16)
+    c.drawString(margin_left, current_y, "Relatório de Pedidos")
+    current_y -= 30  # espaço após o título
 
-        # Passo 3: Limpar o banco de dados (zerar as tabelas)
-        self.stdout.write(self.style.SUCCESS('Limpando o banco de dados...'))
-        subprocess.run(['python', 'manage.py', 'flush', '--no-input'])
+    # Desenhando a tabela de pedidos
+    c.setFont("Calibri", 10)
 
-        # Passo 4: Importar os dados usando loaddata
-        self.stdout.write(self.style.SUCCESS('Importando dados para o banco de dados...'))
-        subprocess.run(['python', 'manage.py', 'loaddata', backup_utf8_file])
+    # Definindo coordenadas fixas para as colunas (total de 6 colunas)
+    column_positions = [
+        margin_left,
+        margin_left + column_width,
+        margin_left + 2 * column_width,
+        margin_left + 3 * column_width,
+        margin_left + 4 * column_width,
+        margin_left + 5 * column_width
+    ]
 
-        self.stdout.write(self.style.SUCCESS('Backup, limpeza e importação concluídos com sucesso!'))
-"""
+    col = 0  # para controlar em qual coluna estamos
+    for item in lista_filtrada:
+        nome, data, local, observacao, itens, telefone, endereco = item
+
+        # Conteúdo de cada pedido, agora separado por quebras de linha
+        pedido_text = []
+        pedido_text.append("")  # Espaço adicional entre pedidos
+        data_n, dia = data.split(" - ")
+        if data:
+            # Definindo a fonte para negrito (Calendário)
+            c.setFont("Calibri-Bold", 12)
+            pedido_text.append(f"{dia.upper()} - {data_n}")
+            c.setFont("Calibri", 12)  # Volta para a fonte normal para o resto do texto
+        if nome:
+            pedido_text.append(f"{nome.upper()} {telefone}")
+        if local:
+            pedido_text.append(f"Local: {local}")
+        # Adicionando os itens linha por linha
+        if itens:
+            for i in itens:
+                pedido_text.append(
+                    f"{i[1]} - {i[0].nome} {i[0].modelo}")  # Aqui, a cada item, ele será colocado em uma linha
+        if endereco:
+            pedido_text.append(f"Endereço: {endereco}")
+        if observacao:
+            pedido_text.append(f"Observação: {observacao}")
+
+        # Adicionando o pedido na coluna apropriada
+        for line in pedido_text:
+            c.drawString(column_positions[col], current_y, line)
+            current_y -= line_height  # Move para a linha abaixo
+
+        # Verifica se é necessário mudar de coluna
+        if current_y < 100:  # Se atingir a parte inferior da página, muda para a próxima coluna
+            col += 2  # Avança duas colunas de uma vez
+            current_y = margin_top  # Recomeça do topo para as novas colunas
+
+            if col > 5:  # Se passar da sexta coluna (ou seja, 3 grupos de 2 colunas), cria uma nova página
+                c.showPage()
+                col = 0  # reinicia para a primeira coluna
+                current_y = margin_top  # Reinicia a posição y no topo
+
+        # Desenhando a linha horizontal após o "Endereço"
+        c.setStrokeColor(colors.black)
+        c.setLineWidth(0.5)
+        c.line(column_positions[col], current_y, column_positions[col] + column_width, current_y)
+
+        # Atualiza a posição de y após a linha horizontal
+        current_y -= 10  # Ajuste para o próximo pedido
+
+    # Salvar o arquivo PDF
+    c.save()
+
