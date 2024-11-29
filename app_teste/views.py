@@ -144,8 +144,8 @@ def agenda(request):
             if request.GET.get('pesquisar'):
                 print("entreeiii")
                 gerar_pdf(lista_filtrada)
-
-                arquivo = "pedido_relatorio.pdf"
+                time.sleep(2)
+                arquivo = "pedido_relatorio_horizontal.pdf"
                 foi = False
                 while foi == False:
                     if is_file_in_use(arquivo):
@@ -742,6 +742,8 @@ def gerar_pdf(lista_filtrada):
             c.setFont("Calibri-Bold", 12)
             pedido_text.append(f"{dia.upper()} - {data_n}")
             c.setFont("Calibri", 12)  # Volta para a fonte normal para o resto do texto
+        if telefone is None:
+            telefone = ''
         if nome:
             pedido_text.append(f"{nome.upper()} {telefone}")
         if local:
