@@ -26,6 +26,16 @@
     Upload Backup
   </button>
 
+  {% if resultado == 1 %}
+    <div id="mensagem-alerta" class="alert alert-success" role="alert">
+        Backup Importado com Sucesso!!!
+    </div>
+  {% elif resultado == 0 %}
+    <div id="mensagem-alerta" class="alert alert-danger" role="alert">
+        Falha ao importar aquivo, verifique se o arquivo foi escolhido corretamente!!
+    </div>
+  {% endif %}
+
 </form>
 
 {% endblock %}

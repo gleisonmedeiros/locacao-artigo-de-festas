@@ -609,8 +609,8 @@ def backup_view(request):
                 subprocess.run(['python', 'manage.py', 'loaddata', backup_utf8_file], check=True)
 
                 # Passo 5: Retornar uma mensagem de sucesso
-
-                return render(request, 'backup.html', {'success': 'Backup importado com sucesso!'})
+                resultado = 1
+                return render(request, 'backup.html', {'resultado':resultado})
 
 
             except subprocess.CalledProcessError as e:
@@ -634,6 +634,9 @@ def backup_view(request):
             if os.path.exists(backup_utf8_file):
                 os.remove(backup_utf8_file)
             return render(request, 'backup.html')
+        else:
+            resultado = 0
+            return render(request, 'backup.html',{'resultado':resultado})
 """
             finally:
                 # Limpar arquivos temporários
