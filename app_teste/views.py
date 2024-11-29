@@ -235,7 +235,8 @@ def excluir_produto(request, produto_id):
         produto.delete()
         #messages.success(request, 'Produto excluído com sucesso!')
         messages = 'Produto excluído com sucesso!'
-        return render(request, 'pesquisa_produto.html', {'messages':messages})
+        todos_produtos = Produto_Model.objects.all()
+        return render(request, 'pesquisa_produto.html', {'messages':messages,'produtos': todos_produtos})
 
     # Retorna um redirecionamento se não for um POST
     return redirect('listar_produtos')
