@@ -67,6 +67,13 @@ def formata_data(data):
 
     return nova_data
 
+# Função para converter a data no formato desejado
+def get_date(item):
+    #print(item[1])
+    date_str = item[1].split(' - ')[0]  # Extrai apenas a parte "DD/MM/YYYY"
+    return datetime.strptime(date_str, '%d/%m/%Y')
+
+
 def agenda(request):
     form_date = DateRangeForm()
 
@@ -137,8 +144,10 @@ def agenda(request):
             form_date = DateRangeForm(request.POST or None, initial={'data_inicio': data_inicio, 'data_fim': data_fim})
 
         # Lista de dados filtrados com base na data alvo
-            lista_filtrada = [(nome, data, local, observacao, itens, telefone, endereco) for nome, data, local, observacao, itens, telefone,endereco in lista_dados
+            lista_filtrada_a = [(nome, data, local, observacao, itens, telefone, endereco) for nome, data, local, observacao, itens, telefone,endereco in lista_dados
                           if (formata_data(data) >= data_inicio_formatada) and ((formata_data(data) <= data_fim_formatada))]
+
+            lista_filtrada = sorted(lista_filtrada_a, key=get_date)
 
             #print(lista_filtrada)
             if request.GET.get('pesquisar'):
