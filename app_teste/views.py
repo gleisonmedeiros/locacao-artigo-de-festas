@@ -399,48 +399,59 @@ def cadastro_pedido(request):
                         'telefone': telefone,
                         'endereco': endereco
                     }
+                    produto_novo = request.POST.get('cidades')
+                    #print(produto_novo)
+                    nome_produto, modelo_produto = produto_novo.split(' - ')
+                    quantidade_alugada = request.POST.get('quantidade')
+                    #print(quantidade_alugada)
+                    produtos = Produto_Model.objects.all()
+                    #print(produtos)
 
-                    # Salvar itens do pedido
-                    itens_pedido_formset = form.itens_pedido(queryset=ItemPedido.objects.none(), data=request.POST)
-                    if itens_pedido_formset.is_valid():
-                        salvar = True
-                        for formset_form in itens_pedido_formset:
-                            produto = formset_form.cleaned_data.get('produto')
-                            quantidade_alugada = formset_form.cleaned_data.get('quantidade_alugada')
+                    if nome_produto and modelo_produto and (int(quantidade_alugada) > 0):
+                        produto_existe = Produto_Model.objects.filter(nome=nome_produto, modelo=modelo_produto).exists()
+                        print("entei assim mesmo")
+                        if produto_existe:
+                            print(f"O produto {nome_produto} - {modelo_produto} existe no banco de dados!")
+
+                            salvar = True
 
                             for item in lista2:
 
-                                produto_str = f'{produto.nome} - {produto.modelo}'
+                                produto_str = f'{nome_produto} - {modelo_produto}'
                                 protuto2_str = f'{item[1]} - {item[2]} '
 
                                 if (produto_str.strip()) == (protuto2_str.strip()):
                                     salvar = False
                                     break
 
-                        if salvar:  # Se não encontrou duplicado, adiciona o item à lista
-                            lista = [nome, produto.nome, produto.modelo, quantidade_alugada, nova_data, local,
-                                     observacao, telefone, endereco]
-                            lista2.append(lista)
-                            #print("Produto adicionado:", lista)
-                            resultado = 2
+                            if salvar:  # Se não encontrou duplicado, adiciona o item à lista
+                                lista = [nome, nome_produto, modelo_produto, quantidade_alugada, nova_data, local,
+                                         observacao, telefone, endereco]
+                                lista2.append(lista)
+                                #print("Produto adicionado:", lista)
+                                resultado = 2
 
+                            else:
+                                print("Produto já existe, não adicionado.")
+                                resultado = 3
+
+                            #print(lista2)
+
+                            for item in lista2:
+                                resultado_temporario = (f"{item[1]} - {item[2]} - {item[3]}")
+                                lista_itens.append(resultado_temporario)
+
+                            #print(lista_itens)
+                            produtos = Produto_Model.objects.all()
+                            return render(request, 'cadastro_pedido.html', {'form': form,'lista_itens':lista_itens,'resultado':resultado,'produtos': produtos})  # Redirecionar para a página de sucesso após salvar
                         else:
-                            print("Produto já existe, não adicionado.")
-                            resultado = 3
-
-                        #print(lista2)
-
-                        for item in lista2:
-                            resultado_temporario = (f"{item[1]} - {item[2]} - {item[3]}")
-                            lista_itens.append(resultado_temporario)
-
-                        #print(lista_itens)
-
-                        return render(request, 'cadastro_pedido.html', {'form': form,'lista_itens':lista_itens,'resultado':resultado})  # Redirecionar para a página de sucesso após salvar
-                    else:
-                        print("Formulário do item não é válido")
-            except:
+                            print("Formulário do item não é válido")
+                            resultado = 5
+            except ValueError as e:
                 print("Erro ao salvar o Item")
+                print(f"Erro ao dividir o produto: {e}")
+                #delete = False
+                resultado = 5
             else:
                 print("Formulário principal não é válido")
 
@@ -549,35 +560,37 @@ def cadastro_pedido(request):
     #print(delete)
     #print(lista2)
     if delete:
+        try:
 
-        #print(lista2)
+            #print(lista2)
 
-        nome = lista2[0][0]
-        data = lista2[0][4]
-        nova_data = str(data)
-        local = lista2[0][5]
-        observacao = lista2[0][6]
-        telefone = lista2[0][7]
-        endereco = lista2[0][8]
+            nome = lista2[0][0]
+            data = lista2[0][4]
+            nova_data = str(data)
+            local = lista2[0][5]
+            observacao = lista2[0][6]
+            telefone = lista2[0][7]
+            endereco = lista2[0][8]
 
-        guarda_valores = {
-            'nome': nome,
-            'data_de_locacao': nova_data,
-            'local': local,
-            'observacao': observacao,
-            'telefone': telefone,
-            'endereco': endereco
-        }
-
+            guarda_valores = {
+                'nome': nome,
+                'data_de_locacao': nova_data,
+                'local': local,
+                'observacao': observacao,
+                'telefone': telefone,
+                'endereco': endereco
+            }
+        except Exception as e:
+            print(f"Erro : {e}")
 
         form = PedidoModelForm(initial=guarda_valores)
         for item in lista2:
             resultado_temporario = (f"{item[1]} - {item[2]} - {item[3]}")
             lista_itens.append(resultado_temporario)
 
+    produtos = Produto_Model.objects.all()  # Buscar todos os produtos
 
-    return render(request, 'cadastro_pedido.html', {'form': form,'lista_itens':lista_itens})
-
+    return render(request, 'cadastro_pedido.html', {'form': form, 'lista_itens': lista_itens, 'produtos': produtos})
 
 def handle_uploaded_file(f):
     # Caminho absoluto para a raiz do projeto

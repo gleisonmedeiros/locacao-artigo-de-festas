@@ -49,13 +49,19 @@
     <div class="col-md-0"></div>
 
         <div class="col-4">
+            <label for="cidades">Produto:</label>
+            <input class="form-control" type="text" id="cidades" name="cidades" list="listaCidades" placeholder="Digite uma cidade...">
 
-            {% csrf_token %}
-
-            {{ form.itens_pedido.management_form }}
-            {% for formset_form in form.itens_pedido.forms %}
-                {{ formset_form.as_table }}
+            <datalist id="listaCidades">
+            {% for produto in produtos %}
+                <option value="{{ produto.nome }} - {{ produto.modelo }}">{{ produto.nome }} - {{ produto.modelo }}</option>
             {% endfor %}
+            </datalist>
+
+            <div class="col-4" style="margin-top: 5px;">
+                <label for="quantidade">Quantidade alugada:</label>
+                <input class="form-control" type="number" id="quantidade" name="quantidade">
+            </div>
 
         </div>
 
@@ -88,6 +94,10 @@
 {% elif resultado == 3 %}
     <span class="badge text-bg-warning">
         Produto já existe, não adicionado!!
+    </span>
+{% elif resultado == 5 %}
+    <span class="badge text-bg-warning">
+        Produto Inválido!!
     </span>
 {% endif %}
 
@@ -185,5 +195,24 @@
     });
 
 </script>
+
+
+
+  <script>
+    const button = document.getElementById('verificar');
+    const input = document.getElementById('cidades');
+    const options = Array.from(document.querySelectorAll('#listaCidades option')).map(opt => opt.value);
+
+    button.addEventListener('click', () => {
+      const valorDigitado = input.value;
+
+      if (options.includes(valorDigitado)) {
+        alert(`Cidade "${valorDigitado}" está na lista!`);
+      } else {
+        alert(`Cidade "${valorDigitado}" não está na lista.`);
+      }
+    });
+  </script>
+
 
 {% endblock %}

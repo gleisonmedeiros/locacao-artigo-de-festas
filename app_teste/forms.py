@@ -63,7 +63,7 @@ class PedidoModelForm(forms.ModelForm):
         form=ItemPedidoForm,
         fields=['produto', 'quantidade_alugada'],
         extra=1,
-        can_delete=True,
+        can_delete=False,
         widgets={
             'produto': forms.Select(attrs={'class': 'form-select', 'aria-label': 'Produto'}),
             'quantidade_alugada': forms.NumberInput(
