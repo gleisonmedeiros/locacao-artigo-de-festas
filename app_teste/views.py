@@ -24,6 +24,9 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.platypus import Paragraph
+from reportlab.lib.units import inch
 
 locale.setlocale(locale.LC_TIME, 'pt_BR.utf-8')
 
@@ -461,6 +464,7 @@ def cadastro_pedido(request):
                     nome = form.cleaned_data.get('nome')
                     data = form.cleaned_data.get('data_de_locacao')
                     nova_data = str(data)
+                    produtos = Produto_Model.objects.all()
 
                     # Verificar se já existe um pedido com o mesmo nome e data
                     if 'nome' not in request.GET:
@@ -468,14 +472,16 @@ def cadastro_pedido(request):
                             # Caso exista, mostrar uma mensagem de erro
                             form = PedidoModelForm()
                             lista2 = []
+
                             return render(request, 'cadastro_pedido.html',
-                                          {'form': form, 'lista_itens': lista_itens, 'resultado': 4})
+                                          {'form': form, 'lista_itens': lista_itens, 'resultado': 4,'produtos':produtos})
                         else:
                             resultado = 1
                             salva_pedido()
                             #print(lista2)
                             form = PedidoModelForm()
-                            contexto = {'form': form, 'resultado': resultado}
+                            produtos = Produto_Model.objects.all()
+                            contexto = {'form': form, 'resultado': resultado,'produtos':produtos}
                             lista2 = []
 
                     else:
@@ -513,7 +519,7 @@ def cadastro_pedido(request):
                         resultado = 1
                         salva_pedido()
                         form = PedidoModelForm()
-                        contexto = {'form': form, 'resultado': resultado}
+                        contexto = {'form': form, 'resultado': resultado,'produtos':produtos}
                         lista2 = []
                         #print(lista2)
 
@@ -524,7 +530,8 @@ def cadastro_pedido(request):
 
                 form = PedidoModelForm()
                 #print("estou apagando aqui 2")
-                contexto = {'form': form,'resultado':resultado}
+                produtos = Produto_Model.objects.all()
+                contexto = {'form': form,'resultado':resultado,'produtos':produtos}
                 lista2 = []
                 print(f'Erro: {e}')
 
@@ -713,35 +720,67 @@ def is_file_in_use(file_path):
         # Se ocorreu um erro ao abrir o arquivo, provavelmente está em uso
         return True
 
-def gerar_pdf(lista_filtrada):
-    # Criando o PDF com o tamanho da página A4 (landscape)
-    pdf_file = "pedido_relatorio_horizontal.pdf"
-    c = canvas.Canvas(pdf_file, pagesize=landscape(letter))  # Usando paisagem (landscape)
+styles = getSampleStyleSheet()
+style_normal = styles["Normal"]
+style_bold = styles["Heading4"]
 
-    # Definir margens e espaçamento
+
+def split_text_by_chars(text, max_chars):
+    """
+    Divide um texto em linhas de no máximo 'max_chars' caracteres,
+    tentando não quebrar palavras no meio.
+    """
+    words = text.split()
+    lines = []
+    current_line = ""
+
+    for word in words:
+        # Se adicionar a próxima palavra ultrapassa o limite, guarda a linha atual e começa uma nova
+        if len(current_line) + len(word) + 1 > max_chars:
+            lines.append(current_line)
+            current_line = word
+        else:
+            current_line += (" " if current_line else "") + word
+
+    # Adiciona a última linha
+    if current_line:
+        lines.append(current_line)
+
+    return lines
+
+
+def draw_wrapped_text(canvas, text, x, y, width, max_chars=40, line_spacing=5):
+    """
+    Desenha um texto no PDF, quebrando por um número máximo de caracteres por linha.
+    """
+    lines = split_text_by_chars(text, max_chars)
+    for line in lines:
+        canvas.drawString(x, y, line)
+        y -= 12  # Ajuste para a próxima linha (altura da fonte + espaçamento)
+    return len(lines) * 12 + line_spacing  # Retorna a altura usada
+
+
+def gerar_pdf(lista_filtrada):
+    pdf_file = "pedido_relatorio_horizontal.pdf"
+    c = canvas.Canvas(pdf_file, pagesize=landscape(letter))
+
     margin_left = 40
-    margin_top = 550  # Ajuste para começar mais alto devido à largura maior
-    column_width = 130  # Diminuindo a largura de cada coluna
-    line_height = 15  # altura de cada linha
+    margin_top = 550
+    column_width = 130  # Mantendo a mesma largura
     current_y = margin_top
 
-    # Caminhos para as fontes .ttf
-    font_path_regular = r"calibri.ttf"  # Caminho para a fonte regular
-    font_path_bold = r"calibri-bold.ttf"  # Caminho para a fonte negrito
+    font_path_regular = r"calibri.ttf"
+    font_path_bold = r"calibri-bold.ttf"
 
-    # Registrar as fontes
     pdfmetrics.registerFont(TTFont('Calibri', font_path_regular))
     pdfmetrics.registerFont(TTFont('Calibri-Bold', font_path_bold))
 
-    # Adicionando título no topo
     c.setFont("Helvetica-Bold", 16)
     c.drawString(margin_left, current_y, "Relatório de Pedidos")
-    current_y -= 30  # espaço após o título
+    current_y -= 30
 
-    # Desenhando a tabela de pedidos
     c.setFont("Calibri", 10)
 
-    # Definindo coordenadas fixas para as colunas (total de 6 colunas)
     column_positions = [
         margin_left,
         margin_left + column_width,
@@ -751,58 +790,50 @@ def gerar_pdf(lista_filtrada):
         margin_left + 5 * column_width
     ]
 
-    col = 0  # para controlar em qual coluna estamos
+    col = 0
     for item in lista_filtrada:
         nome, data, local, observacao, itens, telefone, endereco = item
 
-        # Conteúdo de cada pedido, agora separado por quebras de linha
         pedido_text = []
-        pedido_text.append("")  # Espaço adicional entre pedidos
+        pedido_text.append("")
+
         data_n, dia = data.split(" - ")
         if data:
-            # Definindo a fonte para negrito (Calendário)
             c.setFont("Calibri-Bold", 12)
             pedido_text.append(f"{dia.upper()} - {data_n}")
-            c.setFont("Calibri", 12)  # Volta para a fonte normal para o resto do texto
+            c.setFont("Calibri", 10)
+
         if telefone is None:
             telefone = ''
         if nome:
             pedido_text.append(f"{nome.upper()} {telefone}")
         if local:
             pedido_text.append(f"Local: {local}")
-        # Adicionando os itens linha por linha
         if itens:
             for i in itens:
-                pedido_text.append(
-                    f"{i[1]} - {i[0].nome} {i[0].modelo}")  # Aqui, a cada item, ele será colocado em uma linha
+                pedido_text.append(f"{i[1]} - {i[0].nome} {i[0].modelo}")
         if endereco:
             pedido_text.append(f"Endereço: {endereco}")
         if observacao:
             pedido_text.append(f"Observação: {observacao}")
 
-        # Adicionando o pedido na coluna apropriada
         for line in pedido_text:
-            c.drawString(column_positions[col], current_y, line)
-            current_y -= line_height  # Move para a linha abaixo
+            altura_utilizada = draw_wrapped_text(c, line, column_positions[col], current_y, column_width, max_chars=50)
+            current_y -= altura_utilizada
 
-        # Verifica se é necessário mudar de coluna
-        if current_y < 100:  # Se atingir a parte inferior da página, muda para a próxima coluna
-            col += 2  # Avança duas colunas de uma vez
-            current_y = margin_top  # Recomeça do topo para as novas colunas
+        if current_y < 100:
+            col += 2
+            current_y = margin_top
 
-            if col > 5:  # Se passar da sexta coluna (ou seja, 3 grupos de 2 colunas), cria uma nova página
+            if col > 5:
                 c.showPage()
-                col = 0  # reinicia para a primeira coluna
-                current_y = margin_top  # Reinicia a posição y no topo
+                col = 0
+                current_y = margin_top
 
-        # Desenhando a linha horizontal após o "Endereço"
         c.setStrokeColor(colors.black)
         c.setLineWidth(0.5)
         c.line(column_positions[col], current_y, column_positions[col] + column_width, current_y)
 
-        # Atualiza a posição de y após a linha horizontal
-        current_y -= 10  # Ajuste para o próximo pedido
+        current_y -= 10
 
-    # Salvar o arquivo PDF
     c.save()
-
