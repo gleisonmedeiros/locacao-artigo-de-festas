@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse
-from .forms import ProdutoForm, ClienteForm, PedidoModelForm, DateRangeForm
+from .forms import ProdutoForm, PedidoModelForm, DateRangeForm
 from .models import Produto_Model
 from .models import PedidoModel, ItemPedido
 from collections import defaultdict
@@ -49,20 +49,6 @@ def ola_mundo(request):
 def index(request):
     return render(request, 'index.html')
 
-def cadastro_cliente(request):
-    if request.method == 'POST':
-        form = ClienteForm(request.POST)
-        if form.is_valid():
-            form.save()
-            form = ClienteForm()
-            dicionario = {'form': form, 'sucesso': 1}
-            return render(request, 'cadastro_cliente.html', dicionario)
-        else:
-            dicionario = {'form': form, 'sucesso': 0}
-            return render(request, 'cadastro_cliente.html', dicionario)
-    else:
-        form = ClienteForm()
-    return render(request, 'cadastro_cliente.html', {'form': form})
 
 
 def formata_data(data):
@@ -81,64 +67,75 @@ def agenda(request):
     form_date = DateRangeForm()
 
     if request.method == 'GET':
-
-
-        produtos_por_cliente = defaultdict(list)
-
         # Consulta para obter os itens dos pedidos com informações relacionadas
         pedidos_itens = ItemPedido.objects.select_related('produto', 'pedido').all()
 
-        # Preencher o dicionário com os produtos agrupados por cliente
-        for pedido_item in pedidos_itens:
-            produto_nome = pedido_item.produto
-            quantidade_alugada = pedido_item.quantidade_alugada
-            #cliente_nome = pedido_item.pedido.cliente
-            cliente_nome = (pedido_item.pedido.nome)
+        pedidos_agregados = {}
 
-            data = pedido_item.pedido.data_de_locacao
-            data_formatada = datetime.strptime(data, "%Y-%m-%d")
-            # Obtenha o nome do dia da semana
-            #print((data_formatada.strftime("%A")))
-            dia_da_semana = unidecode((data_formatada.strftime("%A").capitalize()))
-            if (dia_da_semana == 'Sa!bado'):
+        # Preencher o dicionário com os dados dos pedidos
+        for pedido_item in pedidos_itens:
+            id_pedido = pedido_item.pedido.id
+            cliente_nome = pedido_item.pedido.nome
+            produto_nome = pedido_item.produto.nome
+            produto_modelo = pedido_item.produto.modelo
+            produto_quantidade = pedido_item.quantidade_alugada
+            telefone = pedido_item.pedido.telefone
+            endereco = pedido_item.pedido.endereco
+            local = pedido_item.pedido.local
+            data_de_locacao = pedido_item.pedido.data_de_locacao
+            observacao = pedido_item.pedido.observacao
+
+            #print(f'hhhhh - {id_pedido}')
+
+            produtos = f"{produto_nome} - {produto_modelo} - {produto_quantidade}"
+
+            # Se o cliente não estiver no dicionário, adicione-o
+            if cliente_nome not in pedidos_agregados:
+                pedidos_agregados[cliente_nome] = {
+                    'id_pedido':id_pedido,
+                    'telefone': telefone,
+                    'endereco': endereco,
+                    'local': local,
+                    'data_de_locacao': data_de_locacao,
+                    'observacao': observacao,
+                    'produtos': []  # Lista de produtos
+                }
+
+            #print(pedidos_agregados[cliente_nome])
+
+            # Adiciona o nome do produto à lista de produtos do cliente
+            pedidos_agregados[cliente_nome]['produtos'].append(produtos)
+
+        # Tratamento do dia da semana e formatação da data
+        for cliente_nome, dados_cliente in pedidos_agregados.items():
+            data = dados_cliente['data_de_locacao']
+
+            # Formatação da data
+            data_formatada = data.strftime("%Y-%m-%d")  # Converte para string no formato correto
+
+            # Obtém o nome do dia da semana
+            dia_da_semana = unidecode(data.strftime("%A").capitalize())
+
+            # Corrige nomes de dias da semana que perderam acentos
+            if dia_da_semana == 'Sabado':
                 dia_da_semana = 'Sábado'
-            elif (dia_da_semana == 'TeraSSa-feira'):
+            elif dia_da_semana == 'Terca-feira':
                 dia_da_semana = 'Terça-feira'
 
-            ano, mes, dia = data.split('-')
-            data_locacao =f'{dia}/{mes}/{ano} - {dia_da_semana}'
-            local=(pedido_item.pedido.local)
-            observacao = (pedido_item.pedido.observacao)
-            telefone = (pedido_item.pedido.telefone)
-            endereco = (pedido_item.pedido.endereco)
+            # Quebra a string no formato correto
+            ano, mes, dia = data_formatada.split('-')
+            data_locacao = f'{dia}/{mes}/{ano} - {dia_da_semana}'
 
-            chave = (cliente_nome, data_locacao,local,observacao,telefone,endereco)
+            # Atualiza a data formatada no dicionário
+            dados_cliente['data_locacao_formatada'] = data_locacao
 
-            # Adicionar informações ao dicionário
-            produtos_por_cliente[chave].append({
-                'produto_nome': produto_nome,
-                'quantidade_alugada': quantidade_alugada,
-            })
+        lista_dados = list(pedidos_agregados.values())
 
-        dicionario_novo = dict(produtos_por_cliente)
-
-        result = []
-        for chave, items in dicionario_novo.items():
-            cliente_nome, data_locacao,local,observacao,telefone,endereco = chave  # Desempacotando a tupla
-            result.append((cliente_nome, data_locacao,local,observacao,
-                           [[item['produto_nome'], item['quantidade_alugada']] for item in items],telefone,endereco))
-
-        # Exibindo a lista de resultados
-        #print(result)
-
-        # Criando a lista de dados para renderizar no template
-        lista_dados = [(nome,data,local,observacao, itens,telefone,endereco) for nome, data,local,observacao, itens,telefone,endereco in result]
-        #print(lista_dados)
+        # Filtragem por data, se fornecida
         paramentro = False
-        if request.GET.get('datainicio'):
-            data_inicio = (request.GET.get('datainicio'))
-            data_fim = (request.GET.get('datafim'))
-            #print("ui")
+        if request.GET.get('datainicio') and request.GET.get('datafim'):
+            data_inicio = request.GET.get('datainicio')
+            data_fim = request.GET.get('datafim')
 
             data_inicio_formatada = datetime.strptime(data_inicio, "%Y-%m-%d").date()
             data_fim_formatada = datetime.strptime(data_fim, "%Y-%m-%d").date()
@@ -146,135 +143,73 @@ def agenda(request):
 
             form_date = DateRangeForm(request.POST or None, initial={'data_inicio': data_inicio, 'data_fim': data_fim})
 
-        # Lista de dados filtrados com base na data alvo
-            lista_filtrada_a = [(nome, data, local, observacao, itens, telefone, endereco) for nome, data, local, observacao, itens, telefone,endereco in lista_dados
-                          if (formata_data(data) >= data_inicio_formatada) and ((formata_data(data) <= data_fim_formatada))]
+            lista_dados = [
+                item for item in pedidos_agregados.values()
+                if item['data_de_locacao'] >= data_inicio_formatada and item['data_de_locacao'] <= data_fim_formatada
+            ]
 
-            lista_filtrada = sorted(lista_filtrada_a, key=get_date)
+        # Passa os dados para o template
+        if not paramentro:
+            return render(request, 'agenda.html', {'pedidos_agregados': pedidos_agregados, 'form': form_date})
 
-            #print(lista_filtrada)
-            if request.GET.get('pesquisar'):
-                print("entreeiii")
-                gerar_pdf(lista_filtrada)
-                time.sleep(2)
-                arquivo = "pedido_relatorio_horizontal.pdf"
-                foi = False
-                while foi == False:
-                    if is_file_in_use(arquivo):
-                        print(f"O arquivo {arquivo} está em uso.")
-                        time.sleep(1)
-                    else:
-                        print(f"O arquivo {arquivo} não está em uso.")
-                        foi = True
-
-                if not os.path.exists(arquivo):
-                    print(f"O arquivo {arquivo} não foi encontrado.")
-
-                # Retornar o arquivo PDF para o download
-                with open(arquivo, 'rb') as file:
-                    # Criando a resposta HTTP para o download
-                    response = HttpResponse(file.read(), content_type='application/pdf')
-                    # Forçar o download com Content-Disposition
-                    response['Content-Disposition'] = f'attachment; filename="{arquivo}"'
-                    return response
-
-        if(paramentro == False):
-            return render(request, 'agenda.html', {'lista_dados': lista_dados, 'form':form_date})
         else:
+            # Calculando o somatório de produtos
             somatorio_produtos = defaultdict(int)
-            for nome, data, local, observacao, itens, telefone, endereco in lista_filtrada:
-                for item in itens:
-                    # item é uma lista [nome_do_produto, quantidade]
-                    produto_nome = item[0]  # Acessando o nome do produto
-                    quantidade_alugada = item[1]  # Acessando a quantidade
-                    somatorio_produtos[produto_nome] += quantidade_alugada
+            for item in lista_dados:
+                for produto in item['produtos']:
+                    somatorio_produtos[produto] += 1  # Soma a quantidade de cada produto
 
+            # Gerar o novo resultado para exibir no template
             novo_resultado = []
-
             for produto, quantidade in somatorio_produtos.items():
-                #print(f"Nome: {produto.nome}")
-                #print(f"Modelo: {produto.modelo}")
-                #print(f"Quantidade: {quantidade}")
-                qtd_produto = Produto_Model.objects.get(nome=produto.nome, modelo=produto.modelo)
-                #print(qtd_produto.quantidade)
-                novo_resultado.append([produto.nome,produto.modelo,quantidade,qtd_produto.quantidade-quantidade])
+                qtd_produto = Produto_Model.objects.get(nome=produto)
+                novo_resultado.append([produto, quantidade, qtd_produto.quantidade - quantidade])
 
-
-            return render(request, 'agenda.html', {'lista_dados': lista_filtrada, 'form': form_date,'novo_resultado': novo_resultado})
-
-
+            return render(request, 'agenda.html',
+                          {'pedidos_agregados': pedidos_agregados, 'form': form_date, 'novo_resultado': novo_resultado})
 
     elif request.method == 'POST':
-
         form_date = DateRangeForm(request.POST)
 
-        if form_date.is_valid() and ('pesquisar' in request.POST):
+        if form_date.is_valid() and 'pesquisar' in request.POST:
             data_inicio = form_date.cleaned_data['data_inicio'].strftime('%Y-%m-%d')
             data_fim = form_date.cleaned_data['data_fim'].strftime('%Y-%m-%d')
-            url_agenda = reverse('agenda') + '?datainicio=' + data_inicio + '&datafim=' + data_fim
+            url_agenda = reverse('agenda') + f'?datainicio={data_inicio}&datafim={data_fim}'
             return redirect(url_agenda)
 
+
         elif 'editar_itens' in request.POST:
-            #print("uiii")
-            nome_cliente = (request.POST['nome'].split(' - ')[0])
-            data = (request.POST['data'].split(' ')[0])
-            data_datetime = datetime.strptime(data, "%d/%m/%Y")
-            data_formatada = data_datetime.strftime("%Y-%m-%d")
-            #print(nome_cliente)
-            #print(data)
-            pedido = PedidoModel.objects.get(nome=nome_cliente, data_de_locacao=data_formatada)
 
-            # Preenche o formulário com os dados do pedido
-            form = PedidoModelForm(instance=pedido)
+            #print("Clicou no editar...........")
 
-            pedidos_itens = ItemPedido.objects.select_related('produto', 'pedido').all()
+            id_pedido = request.POST['id_pedido']  # Obtendo o ID do pedido diretamente do formulário
+
+            return redirect(f'/cadastro-pedido/?id={id_pedido}')
 
 
-            itens = []
-            # Preencher o dicionário com os produtos agrupados por cliente
-            for pedido_item in pedidos_itens:
-                #print(pedido_item.pedido.data_de_locacao)
-                #print(data)
-                if (pedido_item.pedido.nome == nome_cliente) and (pedido_item.pedido.data_de_locacao == data_formatada):
-                    produto = (pedido_item.produto)
-                    quantidade = (pedido_item.quantidade_alugada)
-                    itens.append(f'{produto} - {quantidade}')
-
-            #for item in itens:
-                #print(item)
-
-            itens_serializado = json.dumps(itens)
-
-
-            # Passa os dados para o template
-            #return render(request, 'cadastro_pedido.html',{'form': form, 'lista_itens': lista_itens, 'resultado': resultado})
-            #return render(request, 'cadastro_pedido.html',{'form': form,'lista_itens':itens})
-            return redirect(f'/cadastro-pedido/?nome={nome_cliente}&data={data_formatada}&itens={itens_serializado}')
 
         elif 'delete_itens' in request.POST:
-            nome_cliente = (request.POST['nome'].split(' - ')[0])
-            data = (request.POST['data'].split(' ')[0])
-            data_datetime = datetime.strptime(data, "%d/%m/%Y")
-            data_formatada = data_datetime.strftime("%Y-%m-%d")
-            #print(nome_cliente)
-            #print(data)
-            #cliente = Cliente_Model.objects.get(nome=nome_cliente)  # Obtenha o objeto do cliente pelo nome
-            pedido = PedidoModel.objects.get(nome=nome_cliente,data_de_locacao=data_formatada)  # Consulte o pedido usando o objeto do cliente
-            pedido.delete()
-            return redirect('agenda')
+
+            id_pedido = request.POST['id_pedido']  # Captura o ID enviado no formulário
+
+            print(f'pedido excluido:{id_pedido}')
+
+            if id_pedido:
+                PedidoModel.objects.filter(id=id_pedido).delete()  # Exclui o pedido
+
+            return redirect('/agenda/')  # Redireciona para recarregar a lista corretamente
+
         elif 'imprimir' in request.POST:
-            print("passei por aqui")
             data_inicio = form_date.cleaned_data['data_inicio'].strftime('%Y-%m-%d')
             data_fim = form_date.cleaned_data['data_fim'].strftime('%Y-%m-%d')
             valor = '1'
-            url_agenda = reverse('agenda') + '?datainicio=' + data_inicio + '&datafim=' + data_fim + '&pesquisar='+ valor
+            url_agenda = reverse('agenda') + f'?datainicio={data_inicio}&datafim={data_fim}&pesquisar={valor}'
             return redirect(url_agenda)
 
-
         else:
-            #print('erro no POST')
             return redirect('agenda')
 
+    return render(request, 'agenda.html', {})
 
 def excluir_produto(request, produto_id):
     produto = get_object_or_404(Produto_Model, id=produto_id)
@@ -323,282 +258,140 @@ def cadastro_produto(request, produto_id=None):
     return render(request, 'cadastro_produto.html', {'form': form})
 
 def salva_pedido():
-    global lista2
+    lista2 = request.session.get('lista2', [])
 
-    #cliente = Cliente_Model.objects.get(nome=lista2[0][0])
-    pedido = PedidoModel(nome=lista2[0][0], data_de_locacao=lista2[0][4],local=lista2[0][5],observacao=lista2[0][6],telefone=lista2[0][7],endereco=lista2[0][8])
-
+    pedido = PedidoModel(nome=lista2[0][0], data_de_locacao=lista2[0][4], local=lista2[0][5],
+                         observacao=lista2[0][6], telefone=lista2[0][7], endereco=lista2[0][8])
     pedido.save()
-    # Criar uma instância do cliente (substitua 'nome_do_cliente' pelo nome real)
-    for lista in lista2:
 
-        # Adicionar itens ao pedido
-        produto1 = Produto_Model.objects.get(nome=lista[1],modelo=lista[2])
+    for lista in lista2:
+        produto1 = Produto_Model.objects.get(nome=lista[1], modelo=lista[2])
         item1 = ItemPedido(produto=produto1, quantidade_alugada=lista[3], pedido=pedido)
         item1.save()
 
-        #print(item1)
-
 
 def cadastro_pedido(request):
-    global lista2
-    #print (lista2)
-    #print("")
-    global delete
-    global guarda_valores
-    global nome_antigo
-    global data_antigo
-
-    delete = False
-
     lista_itens = []
+    resultado = 10
 
-    #print(lista_itens)
-    #print("passei por aqui")
     if request.method == 'POST':
-        form = PedidoModelForm(request.POST or None)
-        delete = True
-        # Excluir item se delete_index estiver no POST
-        delete_index = request.POST.get('delete_index')
-        if delete_index is not None:
-            delete = True
-            try:
-                delete_index = int(delete_index)
-                if 0 <= delete_index < len(lista2):
-                    del lista2[delete_index]
-                    #print(f"Item na posição {delete_index} removido de lista2.")
-            except ValueError:
-                print("Índice de exclusão inválido")
+        form = PedidoModelForm(request.POST)
 
+        # Excluir item da lista
+        if 'delete_index' in request.POST:
+            delete_index = int(request.POST['delete_index'])
+            lista2 = request.session.get('lista2', [])
+
+            if 0 <= delete_index < len(lista2):
+                del lista2[delete_index]
+                request.session['lista2'] = lista2  # Atualiza a sessão
+
+            if 'id' in request.GET:  # Mantém os dados do pedido ao excluir
+                id = request.GET['id']
+                pedido = PedidoModel.objects.get(id=id)
+                form = PedidoModelForm(instance=pedido)
+
+        # Adicionar item à lista
         elif 'save_itens' in request.POST:
-            try:
+            if form.is_valid():
+                dados_pedido = form.cleaned_data
+                nome_produto, modelo_produto = request.POST.get('cidades').split(" - ")
+                quantidade_alugada = int(request.POST.get('quantidade', 0))
 
-                if form.is_valid():
+                if nome_produto and modelo_produto and quantidade_alugada > 0:
+                    produto = Produto_Model.objects.filter(nome=nome_produto, modelo=modelo_produto).first()
+                    if produto:
+                        lista2 = request.session.get('lista2', [])
 
-                    # Salvar pedido principal
-                    nome = form.cleaned_data.get('nome')
-
-                    data = form.cleaned_data.get('data_de_locacao')
-                    local = form.cleaned_data.get('local')
-                    observacao = form.cleaned_data.get('observacao')
-                    telefone = form.cleaned_data.get('telefone')
-                    endereco = form.cleaned_data.get('endereco')
-                    nova_data = str(data)
-
-                    if telefone is None:
-                        telefone = ''
-                    if local is None:
-                        local = ''
-                    if endereco is None:
-                        endereco = ''
-                    if observacao is None:
-                        observacao = ''
-
-                    guarda_valores = {
-                        'nome': nome,
-                        'data_de_locacao': nova_data,
-                        'local': local,
-                        'observacao': observacao,
-                        'telefone': telefone,
-                        'endereco': endereco
-                    }
-                    produto_novo = request.POST.get('cidades')
-                    #print(produto_novo)
-                    nome_produto, modelo_produto = produto_novo.split(' - ')
-                    quantidade_alugada = request.POST.get('quantidade')
-                    #print(quantidade_alugada)
-                    produtos = Produto_Model.objects.all()
-                    #print(produtos)
-
-                    if nome_produto and modelo_produto and (int(quantidade_alugada) > 0):
-                        produto_existe = Produto_Model.objects.filter(nome=nome_produto, modelo=modelo_produto).exists()
-                        print("entei assim mesmo")
-                        if produto_existe:
-                            print(f"O produto {nome_produto} - {modelo_produto} existe no banco de dados!")
-
-                            salvar = True
-
-                            for item in lista2:
-
-                                produto_str = f'{nome_produto} - {modelo_produto}'
-                                protuto2_str = f'{item[1]} - {item[2]} '
-
-                                if (produto_str.strip()) == (protuto2_str.strip()):
-                                    salvar = False
-                                    break
-
-                            if salvar:  # Se não encontrou duplicado, adiciona o item à lista
-                                lista = [nome, nome_produto, modelo_produto, quantidade_alugada, nova_data, local,
-                                         observacao, telefone, endereco]
-                                lista2.append(lista)
-                                #print("Produto adicionado:", lista)
-                                resultado = 2
-
-                            else:
-                                print("Produto já existe, não adicionado.")
-                                resultado = 3
-
-                            #print(lista2)
-
-                            for item in lista2:
-                                resultado_temporario = (f"{item[1]} - {item[2]} - {item[3]}")
-                                lista_itens.append(resultado_temporario)
-
-                            #print(lista_itens)
-                            produtos = Produto_Model.objects.all()
-                            return render(request, 'cadastro_pedido.html', {'form': form,'lista_itens':lista_itens,'resultado':resultado,'produtos': produtos})  # Redirecionar para a página de sucesso após salvar
+                        # Verifica se o produto já está na lista
+                        for item in lista2:
+                            if item[1] == nome_produto and item[2] == modelo_produto:
+                                resultado = 3  # Produto já existe
+                                break
                         else:
-                            print("Formulário do item não é válido")
-                            resultado = 5
-            except ValueError as e:
-                print("Erro ao salvar o Item")
-                print(f"Erro ao dividir o produto: {e}")
-                #delete = False
-                resultado = 5
-            else:
-                print("Formulário principal não é válido")
-
-        elif 'save_pedido' in request.POST:
-            try:
-                if form.is_valid():
-                    nome = form.cleaned_data.get('nome')
-                    data = form.cleaned_data.get('data_de_locacao')
-                    nova_data = str(data)
-                    produtos = Produto_Model.objects.all()
-
-                    # Verificar se já existe um pedido com o mesmo nome e data
-                    if 'nome' not in request.GET:
-                        if PedidoModel.objects.filter(nome=nome, data_de_locacao=nova_data).exists():
-                            # Caso exista, mostrar uma mensagem de erro
-                            form = PedidoModelForm()
-                            lista2 = []
-
-                            return render(request, 'cadastro_pedido.html',
-                                          {'form': form, 'lista_itens': lista_itens, 'resultado': 4,'produtos':produtos})
-                        else:
-                            resultado = 1
-                            salva_pedido()
-                            #print(lista2)
-                            form = PedidoModelForm()
-                            produtos = Produto_Model.objects.all()
-                            contexto = {'form': form, 'resultado': resultado,'produtos':produtos}
-                            lista2 = []
+                            lista2.append([
+                                dados_pedido['nome'], nome_produto, modelo_produto, quantidade_alugada,
+                                str(dados_pedido['data_de_locacao']), dados_pedido['local'],
+                                dados_pedido['observacao'], dados_pedido['telefone'],
+                                dados_pedido['endereco']
+                            ])
+                            request.session['lista2'] = lista2
+                            resultado = 2  # Produto adicionado
 
                     else:
-                        local = form.cleaned_data.get('local')
-                        observacao = form.cleaned_data.get('observacao')
-                        telefone = form.cleaned_data.get('telefone')
-                        endereco = form.cleaned_data.get('endereco')
+                        resultado = 5  # Produto não encontrado
+                else:
+                    resultado = 5  # Dados inválidos
 
-                        guarda_valores = {
-                            'nome': nome,
-                            'data_de_locacao': nova_data,
-                            'local': local,
-                            'observacao': observacao,
-                            'telefone': telefone,
-                            'endereco': endereco
-                        }
+        # Salvar pedido no banco
+        elif 'save_pedido' in request.POST:
+            if form.is_valid():
+                nome = form.cleaned_data['nome']
+                data_de_locacao = str(form.cleaned_data['data_de_locacao'])
+                pedido_id = request.GET.get('id')
 
-                        # Atualizando os dados na lista
-                        for item in lista2:
-                            # Atualiza o nome (índice 0)
-                            item[0] = nome  # Atualiza o nome (índice 0)
+                # Verifica se já existe um pedido com o mesmo nome e data, excluindo o atual
+                if PedidoModel.objects.filter(nome=nome, data_de_locacao=data_de_locacao).exclude(id=pedido_id).exists():
+                    resultado = 4  # Pedido já existe
+                else:
+                    if pedido_id:
+                        pedido = PedidoModel.objects.get(id=pedido_id)
+                        pedido.__dict__.update(**form.cleaned_data)
+                        pedido.save()
 
-                            # Atualizar a data e o local
-                            item[4] = nova_data  # Atualiza a data de locação (índice 4)
-                            item[5] = local  # Atualiza o local (índice 5)
+                        # Remove os itens antigos antes de adicionar os novos
+                        ItemPedido.objects.filter(pedido=pedido).delete()
+                    else:
+                        pedido = PedidoModel.objects.create(**form.cleaned_data)
 
-                            # Atualizar observação, telefone e endereço
-                            item[6] = observacao  # Atualiza a observação (índice 6)
-                            item[7] = telefone  # Atualiza o telefone (índice 7)
-                            item[8] = endereco  # Atualiza o endereço (índice 8)
-                        #pedido = PedidoModel.objects.get(nome=nome,data_de_locacao=data)
-                        pedido = PedidoModel.objects.get(nome=nome_antigo, data_de_locacao=data_antigo)
-                        pedido.delete()
-                        #print(lista2)
-                        resultado = 1
-                        salva_pedido()
-                        form = PedidoModelForm()
-                        contexto = {'form': form, 'resultado': resultado,'produtos':produtos}
-                        lista2 = []
-                        #print(lista2)
+                    # Adiciona os novos itens ao pedido
+                    for item in request.session.get('lista2', []):
+                        produto = Produto_Model.objects.get(nome=item[1], modelo=item[2])
+                        ItemPedido.objects.create(pedido=pedido, produto=produto, quantidade_alugada=item[3])
 
-                    return render(request, 'cadastro_pedido.html', contexto)
+                    resultado = 1  # Pedido salvo com sucesso
+                    request.session['lista2'] = []  # Limpa a lista de itens
+                    form = PedidoModelForm()  # Limpa os campos
 
-            except Exception as e:
-                resultado = 0
+    else:
+        form = PedidoModelForm()
 
-                form = PedidoModelForm()
-                #print("estou apagando aqui 2")
-                produtos = Produto_Model.objects.all()
-                contexto = {'form': form,'resultado':resultado,'produtos':produtos}
-                lista2 = []
-                print(f'Erro: {e}')
+        # Carregar pedido existente ao acessar via URL com ID
+        if 'id' in request.GET:
+            id = request.GET['id']
+            try:
+                pedido = PedidoModel.objects.get(id=id)
+                form = PedidoModelForm(instance=pedido)
 
-                return render(request, 'cadastro_pedido.html', contexto)
+                # Carregar itens do pedido na sessão
+                itens_pedido = ItemPedido.objects.filter(pedido=pedido)
+                lista2 = [[
+                    pedido.nome, item.produto.nome, item.produto.modelo, item.quantidade_alugada,
+                    str(pedido.data_de_locacao), pedido.local, pedido.observacao,
+                    pedido.telefone, pedido.endereco
+                ] for item in itens_pedido]
 
-    elif  request.method == 'GET':
+                request.session['lista2'] = lista2
+                lista_itens = list(itens_pedido.values('id', 'produto__nome', 'produto__modelo', 'quantidade_alugada'))
 
-        if request.GET:
-            print("Encontrado parametro")
-            nome = request.GET['nome']
-            data = request.GET['data']
-            nome_antigo = request.GET['nome']
-            data_antigo = request.GET['data']
-            #print(nome_antigo)
-            #print(data_antigo)
-            itens_serializado = request.GET.get('itens', '[]')
-            lista_itens = json.loads(itens_serializado)
-            #print(lista_itens)
-            #print(data)
-            pedido = PedidoModel.objects.get(nome=nome, data_de_locacao=data)
-
-            # Preenche o formulário com os dados do pedido
-            form = PedidoModelForm(instance=pedido)
-            lista2 = []
-
-            for item in lista_itens:
-                temp = [item.strip() for item in item.split('-')]
-                lista2.append([pedido.nome,temp[0],temp[1],temp[2],data,pedido.local,pedido.observacao,pedido.telefone,pedido.endereco])
+            except PedidoModel.DoesNotExist:
+                request.session['lista2'] = []
         else:
-            lista2 = []
-            form = PedidoModelForm()
+            request.session['lista2'] = []  # Reseta a lista ao criar um novo pedido
 
-    #print(delete)
-    #print(lista2)
-    if delete:
-        try:
+    # Ajusta a lista de itens para exibição na tabela
+    lista_itens = [
+        {'produto__nome': item[1], 'produto__modelo': item[2], 'quantidade_alugada': item[3]}
+        for item in request.session.get('lista2', [])
+    ]
 
-            #print(lista2)
-
-            nome = lista2[0][0]
-            data = lista2[0][4]
-            nova_data = str(data)
-            local = lista2[0][5]
-            observacao = lista2[0][6]
-            telefone = lista2[0][7]
-            endereco = lista2[0][8]
-
-            guarda_valores = {
-                'nome': nome,
-                'data_de_locacao': nova_data,
-                'local': local,
-                'observacao': observacao,
-                'telefone': telefone,
-                'endereco': endereco
-            }
-        except Exception as e:
-            print(f"Erro : {e}")
-
-        form = PedidoModelForm(initial=guarda_valores)
-        for item in lista2:
-            resultado_temporario = (f"{item[1]} - {item[2]} - {item[3]}")
-            lista_itens.append(resultado_temporario)
-
-    produtos = Produto_Model.objects.all()  # Buscar todos os produtos
-
-    return render(request, 'cadastro_pedido.html', {'form': form, 'lista_itens': lista_itens, 'produtos': produtos})
-
+    produtos = Produto_Model.objects.all()
+    return render(request, 'cadastro_pedido.html', {
+        'form': form,
+        'lista_itens': lista_itens,
+        'resultado': resultado,
+        'produtos': produtos
+    })
 def handle_uploaded_file(f):
     # Caminho absoluto para a raiz do projeto
     project_root = os.getcwd()
@@ -622,7 +415,7 @@ def backup_view(request):
         if 'download' == comando:
             # Caminho do arquivo de backup
 
-            print("entrei aqui")
+            #print("entrei aqui")
 
             try:
                 # Passo 1: Gerar backup com dumpdata

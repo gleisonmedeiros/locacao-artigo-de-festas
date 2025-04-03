@@ -14,33 +14,33 @@
 </form>
 
 
-
 <div class="row">
-    {% for nome, data, local, observacao, itens, telefone, endereco in lista_dados %}
+    {% for cliente_nome, dados_cliente in pedidos_agregados.items %}
         <div class="col-md-4">
             <div class="card" style="width: 25rem;">
                 <div class="card-body">
-                    <h5 class="card-title">{{ nome }}</h5>
-                    <div class="card-text"><b>Telefone: </b>{% if telefone %}{{ telefone }}{% endif %}</div>
-                    <div class="card-text"><b>Data de Locação: </b>{{ data }}</div>
-                    <div class="card-text"><b>Endereço: </b>{% if endereco %}{{ endereco }}{% endif %}</div>
-                    <div class="card-text"><b>Local: </b>{% if local %}{{ local }}{% endif %}</div>
-                    <div class="card-text"><b>Observação: </b>{% if observacao %}{{ observacao }}{% endif %}</div>
+                    <h5 class="card-title">{{ cliente_nome }}</h5>
+                    <div class="card-text"><b>ID: </b>{% if dados_cliente.id_pedido %}{{ dados_cliente.id_pedido }}{% endif %}</div>
+                    <div class="card-text"><b>Telefone: </b>{% if dados_cliente.telefone %}{{ dados_cliente.telefone }}{% endif %}</div>
+                    <div class="card-text"><b>Data de Locação: </b>{{ dados_cliente.data_locacao_formatada }}</div>
+                    <div class="card-text"><b>Endereço: </b>{% if dados_cliente.endereco %}{{ dados_cliente.endereco }}{% endif %}</div>
+                    <div class="card-text"><b>Local: </b>{% if dados_cliente.local %}{{ dados_cliente.local }}{% endif %}</div>
+                    <div class="card-text"><b>Observação: </b>{% if dados_cliente.observacao %}{{ dados_cliente.observacao }}{% endif %}</div>
 
                     <div class="card-text">
-                        <b>Produtos:</b>
+                        <b>Produtos Alugados:</b>
                         <div id="produtos-limitados-{{ forloop.counter }}">
-                            {% for item in itens|slice:":1" %}
-                                <div> {{ item.1 }} - {{ item.0 }} </div>
+                            {% for produto in dados_cliente.produtos|slice:":1" %}
+                                <div> {{ produto }} </div>
                             {% endfor %}
                         </div>
-                        {% if itens|length > 1 %}
+                        {% if dados_cliente.produtos|length > 1 %}
                             <div id="produtos-completos-{{ forloop.counter }}" style="display: none;">
-                                {% for item in itens %}
-                                    <div> {{ item.1 }} - {{ item.0 }} </div>
+                                {% for produto in dados_cliente.produtos %}
+                                    <div> {{ produto }} </div>
                                 {% endfor %}
                             </div>
-                             <button type="button" class="btn btn-outline-warning" onclick="toggleProdutos({{ forloop.counter }});">Mais...</button>
+                            <button type="button" class="btn btn-outline-warning" onclick="toggleProdutos({{ forloop.counter }});">Mais...</button>
                         {% endif %}
                     </div>
 
@@ -67,8 +67,9 @@
                                         <div class="modal-footer">
                                             <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Cancelar</button>
 
-                                            <input type="hidden" name="nome" value="{{ nome }}">
-                                            <input type="hidden" name="data" value="{{ data }}">
+                                            <input type="hidden" name="nome" value="{{ cliente_nome }}">
+                                            <input type="hidden" name="data" value="{{ dados_cliente.data_locacao_formatada }}">
+                                            <input type="hidden" name="id_pedido" value="{{ dados_cliente.id_pedido }}">
                                             <input type="submit" class="btn btn-danger" name="delete_itens" value="Sim">
                                         </div>
                                     </div>
@@ -81,9 +82,9 @@
                             {% csrf_token %}
 
                             <!-- Campos ocultos para nome e data -->
-                            <input type="hidden" name="nome" value="{{ nome }}">
-                            <input type="hidden" name="data" value="{{ data }}">
-
+                            <input type="hidden" name="nome" value="{{ cliente_nome }}">
+                            <input type="hidden" name="data" value="{{ dados_cliente.data_locacao_formatada }}">
+                            <input type="hidden" name="id_pedido" value="{{ dados_cliente.id_pedido }}">
                             <!-- Campo oculto para indicar ação de editar -->
                             <input type="hidden" name="editar_itens" value="true">
 
@@ -99,6 +100,8 @@
         </div>
     {% endfor %}
 </div>
+
+
 <!-- Mostra o somatório de produtos -->
 <div class="mt-3">
     <b>Detalhes dos Produtos:</b>

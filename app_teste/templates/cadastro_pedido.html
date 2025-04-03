@@ -108,6 +108,8 @@
     <thead>
         <tr>
             <th scope="col">Produto</th>
+            <th scope="col">Modelo</th>
+            <th scope="col">QTD</th>
             <th scope="col">Ação</th>
         </tr>
     </thead>
@@ -115,7 +117,9 @@
     <tbody>
     {% for item in lista_itens %}
     <tr>
-        <td>{{ item }}</td>
+        <td>{{ item.produto__nome }}</td>
+        <td>{{ item.produto__modelo }}</td>
+        <td>{{ item.quantidade_alugada }}</td>
         <td>
             <!-- Botão para excluir o item, enviando o índice do item -->
             <form method="post" action="">
