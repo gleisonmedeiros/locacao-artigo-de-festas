@@ -20,7 +20,6 @@
             <div class="card" style="width: 25rem;">
                 <div class="card-body">
                     <h5 class="card-title">{{ cliente_nome }}</h5>
-                    <div class="card-text"><b>ID: </b>{% if dados_cliente.id_pedido %}{{ dados_cliente.id_pedido }}{% endif %}</div>
                     <div class="card-text"><b>Telefone: </b>{% if dados_cliente.telefone %}{{ dados_cliente.telefone }}{% endif %}</div>
                     <div class="card-text"><b>Data de Locação: </b>{{ dados_cliente.data_locacao_formatada }}</div>
                     <div class="card-text"><b>Endereço: </b>{% if dados_cliente.endereco %}{{ dados_cliente.endereco }}{% endif %}</div>
@@ -107,9 +106,13 @@
     <b>Detalhes dos Produtos:</b>
     <br>
     <div>
-        {% for item in novo_resultado %}
+        {% for item in quantidade_produtos %}
             <div>
-                <p><strong>{{ item.0 }} - {{ item.1 }}:</strong> {{ item.2 }}  |  <strong>Restam:</strong> {{ item.3 }}</p>
+                <p>
+                    <strong>{{ item.produto__nome }} - {{ item.produto__modelo }}:</strong>
+                    {{ item.total }}
+                    | <strong>Restam:</strong> {{ item.restante }}
+                </p>
             </div>
         {% endfor %}
     </div>

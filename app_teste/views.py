@@ -16,6 +16,7 @@ import subprocess
 from django.shortcuts import render
 from django.core.files.storage import FileSystemStorage
 import time
+from django.db.models import Sum
 
 from reportlab.lib.pagesizes import letter,landscape
 from reportlab.lib import colors
@@ -30,9 +31,9 @@ from reportlab.lib.units import inch
 
 locale.setlocale(locale.LC_TIME, 'pt_BR.utf-8')
 
-lista2 = []
-nome_antigo = ""
-data_antigo = ""
+#lista2 = []
+#nome_antigo = ""
+#data_antigo = ""
 
 def listar_produtos(request):
     query = request.GET.get('search')
@@ -67,11 +68,27 @@ def agenda(request):
     form_date = DateRangeForm()
 
     if request.method == 'GET':
-        # Consulta para obter os itens dos pedidos com informações relacionadas
-        pedidos_itens = ItemPedido.objects.select_related('produto', 'pedido').all()
+
+        if request.GET.get('datainicio') and request.GET.get('datafim'):
+            data_inicio = request.GET.get('datainicio')
+            data_fim = request.GET.get('datafim')
+
+            data_inicio_formatada = datetime.strptime(data_inicio, "%Y-%m-%d").date()
+            data_fim_formatada = datetime.strptime(data_fim, "%Y-%m-%d").date()
+
+            pedidos_itens = ItemPedido.objects.select_related('produto', 'pedido').filter(
+                pedido__data_de_locacao__range=(data_inicio_formatada, data_fim_formatada)
+            )
+        else:
+            # Consulta para obter os itens dos pedidos com informações relacionadas
+            pedidos_itens = ItemPedido.objects.select_related('produto', 'pedido').all()
+
 
         pedidos_agregados = {}
 
+        quantidade_produtos = pedidos_itens.values('produto__nome', 'produto__modelo').annotate(total=Sum('quantidade_alugada')).order_by('produto__nome', 'produto__modelo')
+
+        print(quantidade_produtos)
         # Preencher o dicionário com os dados dos pedidos
         for pedido_item in pedidos_itens:
             id_pedido = pedido_item.pedido.id
@@ -129,44 +146,22 @@ def agenda(request):
             # Atualiza a data formatada no dicionário
             dados_cliente['data_locacao_formatada'] = data_locacao
 
-        lista_dados = list(pedidos_agregados.values())
+        #print(pedidos_agregados)
 
-        # Filtragem por data, se fornecida
-        paramentro = False
-        if request.GET.get('datainicio') and request.GET.get('datafim'):
-            data_inicio = request.GET.get('datainicio')
-            data_fim = request.GET.get('datafim')
+        for item in quantidade_produtos:
+            produto = Produto_Model.objects.filter(
+                nome=item['produto__nome'],
+                modelo=item['produto__modelo']
+            ).first()
 
-            data_inicio_formatada = datetime.strptime(data_inicio, "%Y-%m-%d").date()
-            data_fim_formatada = datetime.strptime(data_fim, "%Y-%m-%d").date()
-            paramentro = True
+            if produto:
+                item['restante'] = produto.quantidade - item['total']
+            else:
+                item['restante'] = 0  # ou None, dependendo de como quiser tratar produtos não encontrados
 
-            form_date = DateRangeForm(request.POST or None, initial={'data_inicio': data_inicio, 'data_fim': data_fim})
+        return render(request, 'agenda.html', {'pedidos_agregados': pedidos_agregados, 'form': form_date,'quantidade_produtos':quantidade_produtos})
 
-            lista_dados = [
-                item for item in pedidos_agregados.values()
-                if item['data_de_locacao'] >= data_inicio_formatada and item['data_de_locacao'] <= data_fim_formatada
-            ]
 
-        # Passa os dados para o template
-        if not paramentro:
-            return render(request, 'agenda.html', {'pedidos_agregados': pedidos_agregados, 'form': form_date})
-
-        else:
-            # Calculando o somatório de produtos
-            somatorio_produtos = defaultdict(int)
-            for item in lista_dados:
-                for produto in item['produtos']:
-                    somatorio_produtos[produto] += 1  # Soma a quantidade de cada produto
-
-            # Gerar o novo resultado para exibir no template
-            novo_resultado = []
-            for produto, quantidade in somatorio_produtos.items():
-                qtd_produto = Produto_Model.objects.get(nome=produto)
-                novo_resultado.append([produto, quantidade, qtd_produto.quantidade - quantidade])
-
-            return render(request, 'agenda.html',
-                          {'pedidos_agregados': pedidos_agregados, 'form': form_date, 'novo_resultado': novo_resultado})
 
     elif request.method == 'POST':
         form_date = DateRangeForm(request.POST)
@@ -256,18 +251,6 @@ def cadastro_produto(request, produto_id=None):
         form = ProdutoForm(instance=produto)
 
     return render(request, 'cadastro_produto.html', {'form': form})
-
-def salva_pedido():
-    lista2 = request.session.get('lista2', [])
-
-    pedido = PedidoModel(nome=lista2[0][0], data_de_locacao=lista2[0][4], local=lista2[0][5],
-                         observacao=lista2[0][6], telefone=lista2[0][7], endereco=lista2[0][8])
-    pedido.save()
-
-    for lista in lista2:
-        produto1 = Produto_Model.objects.get(nome=lista[1], modelo=lista[2])
-        item1 = ItemPedido(produto=produto1, quantidade_alugada=lista[3], pedido=pedido)
-        item1.save()
 
 
 def cadastro_pedido(request):
