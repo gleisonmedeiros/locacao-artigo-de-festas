@@ -17,6 +17,7 @@ from django.shortcuts import render
 from django.core.files.storage import FileSystemStorage
 import time
 from django.db.models import Sum
+from io import BytesIO
 
 from reportlab.lib.pagesizes import letter,landscape
 from reportlab.lib import colors
@@ -57,6 +58,36 @@ def formata_data(data):
 
     return nova_data
 
+def converter_pedidos_agregados(pedidos_agregados):
+    lista_filtrada = []
+
+    for nome, dados in pedidos_agregados.items():
+        data = dados.get('data_locacao_formatada', '')
+        local = dados.get('local', '')
+        observacao = dados.get('observacao', '')
+        telefone = dados.get('telefone', '')
+        endereco = dados.get('endereco', '')
+        produtos_raw = dados.get('produtos', [])
+
+        itens = []
+        for item in produtos_raw:
+            try:
+                partes = item.split(' - ')
+                nome_modelo = partes[1]
+                quantidade = partes[2]
+
+                class ProdutoFake:
+                    def __init__(self, nome_modelo):
+                        self.nome, self.modelo = nome_modelo.split(' ', 1) if ' ' in nome_modelo else (nome_modelo, '')
+
+                produto_obj = ProdutoFake(nome_modelo)
+                itens.append((produto_obj, quantidade))
+            except Exception as e:
+                print(f"Erro ao processar item: {item} → {e}")
+
+        lista_filtrada.append((nome, data, local, observacao, itens, telefone, endereco))
+
+    return lista_filtrada
 # Função para converter a data no formato desejado
 def get_date(item):
     #print(item[1])
@@ -79,16 +110,17 @@ def agenda(request):
             pedidos_itens = ItemPedido.objects.select_related('produto', 'pedido').filter(
                 pedido__data_de_locacao__range=(data_inicio_formatada, data_fim_formatada)
             )
+
         else:
             # Consulta para obter os itens dos pedidos com informações relacionadas
-            pedidos_itens = ItemPedido.objects.select_related('produto', 'pedido').all()
+            pedidos_itens = ItemPedido.objects.select_related('produto', 'pedido').order_by('pedido__data_de_locacao')
 
 
         pedidos_agregados = {}
 
         quantidade_produtos = pedidos_itens.values('produto__nome', 'produto__modelo').annotate(total=Sum('quantidade_alugada')).order_by('produto__nome', 'produto__modelo')
 
-        print(quantidade_produtos)
+        #print(quantidade_produtos)
         # Preencher o dicionário com os dados dos pedidos
         for pedido_item in pedidos_itens:
             id_pedido = pedido_item.pedido.id
@@ -134,9 +166,11 @@ def agenda(request):
             dia_da_semana = unidecode(data.strftime("%A").capitalize())
 
             # Corrige nomes de dias da semana que perderam acentos
-            if dia_da_semana == 'Sabado':
+            print(dia_da_semana)
+
+            if dia_da_semana == 'Sabado' or dia_da_semana =='Sa!bado':
                 dia_da_semana = 'Sábado'
-            elif dia_da_semana == 'Terca-feira':
+            elif dia_da_semana == 'Terca-feira' or dia_da_semana == 'TeraSSa-feira':
                 dia_da_semana = 'Terça-feira'
 
             # Quebra a string no formato correto
@@ -146,7 +180,12 @@ def agenda(request):
             # Atualiza a data formatada no dicionário
             dados_cliente['data_locacao_formatada'] = data_locacao
 
-        #print(pedidos_agregados)
+        print(pedidos_agregados)
+
+        if request.GET.get('pesquisar') == '1':
+            print("imprimir")
+            lista_filtrada = converter_pedidos_agregados(pedidos_agregados)
+            return gerar_pdf(lista_filtrada)
 
         for item in quantidade_produtos:
             produto = Produto_Model.objects.filter(
@@ -278,10 +317,21 @@ def cadastro_pedido(request):
         elif 'save_itens' in request.POST:
             if form.is_valid():
                 dados_pedido = form.cleaned_data
-                nome_produto, modelo_produto = request.POST.get('cidades').split(" - ")
-                quantidade_alugada = int(request.POST.get('quantidade', 0))
 
-                if nome_produto and modelo_produto and quantidade_alugada > 0:
+                produto_html = request.POST.get('cidades')
+                quantidade_html = (request.POST.get('quantidade', '0'))
+
+                print(f'Produto: {produto_html}')
+                print(f'Quantidade_html: {quantidade_html}')
+
+                if (quantidade_html == ''):
+                    quantidade_html = 0
+
+                if produto_html and int(quantidade_html) > 0:
+
+                    nome_produto, modelo_produto = request.POST.get('cidades').split(" - ")
+                    quantidade_alugada = int(request.POST.get('quantidade', 0))
+
                     produto = Produto_Model.objects.filter(nome=nome_produto, modelo=modelo_produto).first()
                     if produto:
                         lista2 = request.session.get('lista2', [])
@@ -487,14 +537,6 @@ def backup_view(request):
             resultado = 0
             return render(request, 'backup.html',{'resultado':resultado})
 
-def is_file_in_use(file_path):
-    try:
-        # Tentar abrir o arquivo no modo exclusivo (somente para leitura)
-        with open(file_path, 'rb'):
-            return False  # Se conseguiu abrir, o arquivo não está em uso
-    except IOError:
-        # Se ocorreu um erro ao abrir o arquivo, provavelmente está em uso
-        return True
 
 styles = getSampleStyleSheet()
 style_normal = styles["Normal"]
@@ -502,23 +544,17 @@ style_bold = styles["Heading4"]
 
 
 def split_text_by_chars(text, max_chars):
-    """
-    Divide um texto em linhas de no máximo 'max_chars' caracteres,
-    tentando não quebrar palavras no meio.
-    """
     words = text.split()
     lines = []
     current_line = ""
 
     for word in words:
-        # Se adicionar a próxima palavra ultrapassa o limite, guarda a linha atual e começa uma nova
         if len(current_line) + len(word) + 1 > max_chars:
             lines.append(current_line)
             current_line = word
         else:
             current_line += (" " if current_line else "") + word
 
-    # Adiciona a última linha
     if current_line:
         lines.append(current_line)
 
@@ -526,25 +562,24 @@ def split_text_by_chars(text, max_chars):
 
 
 def draw_wrapped_text(canvas, text, x, y, width, max_chars=40, line_spacing=5):
-    """
-    Desenha um texto no PDF, quebrando por um número máximo de caracteres por linha.
-    """
     lines = split_text_by_chars(text, max_chars)
     for line in lines:
         canvas.drawString(x, y, line)
-        y -= 12  # Ajuste para a próxima linha (altura da fonte + espaçamento)
-    return len(lines) * 12 + line_spacing  # Retorna a altura usada
+        y -= 12
+    return len(lines) * 12 + line_spacing
 
 
 def gerar_pdf(lista_filtrada):
-    pdf_file = "pedido_relatorio_horizontal.pdf"
-    c = canvas.Canvas(pdf_file, pagesize=landscape(letter))
+    buffer = BytesIO()
+    c = canvas.Canvas(buffer, pagesize=landscape(letter))
 
     margin_left = 40
     margin_top = 550
-    column_width = 130  # Mantendo a mesma largura
+    column_width = 130
     current_y = margin_top
+    ALTURA_MINIMA = 70  # margem inferior segura
 
+    # Altere os caminhos se precisar
     font_path_regular = r"calibri.ttf"
     font_path_bold = r"calibri-bold.ttf"
 
@@ -554,35 +589,23 @@ def gerar_pdf(lista_filtrada):
     c.setFont("Helvetica-Bold", 16)
     c.drawString(margin_left, current_y, "Relatório de Pedidos")
     current_y -= 30
-
     c.setFont("Calibri", 10)
 
-    column_positions = [
-        margin_left,
-        margin_left + column_width,
-        margin_left + 2 * column_width,
-        margin_left + 3 * column_width,
-        margin_left + 4 * column_width,
-        margin_left + 5 * column_width
-    ]
-
+    column_positions = [margin_left + i * column_width for i in range(6)]
     col = 0
+
     for item in lista_filtrada:
         nome, data, local, observacao, itens, telefone, endereco = item
-
         pedido_text = []
-        pedido_text.append("")
 
-        data_n, dia = data.split(" - ")
         if data:
+            data_n, dia = data.split(" - ")
             c.setFont("Calibri-Bold", 12)
             pedido_text.append(f"{dia.upper()} - {data_n}")
             c.setFont("Calibri", 10)
 
-        if telefone is None:
-            telefone = ''
         if nome:
-            pedido_text.append(f"{nome.upper()} {telefone}")
+            pedido_text.append(f"{nome.upper()} {telefone or ''}")
         if local:
             pedido_text.append(f"Local: {local}")
         if itens:
@@ -594,22 +617,33 @@ def gerar_pdf(lista_filtrada):
             pedido_text.append(f"Observação: {observacao}")
 
         for line in pedido_text:
-            altura_utilizada = draw_wrapped_text(c, line, column_positions[col], current_y, column_width, max_chars=50)
+            # Estimar altura necessária
+            altura_esperada = 12 * ((len(line) // 50) + 1)
+
+            # Verificar antes de desenhar se cabe
+            if current_y - altura_esperada < ALTURA_MINIMA:
+                col += 2
+                current_y = margin_top
+                if col > 5:
+                    c.showPage()
+                    col = 0
+                    current_y = margin_top
+
+            altura_utilizada = draw_wrapped_text(
+                c, line, column_positions[col], current_y, column_width, max_chars=50
+            )
             current_y -= altura_utilizada
 
-        if current_y < 100:
-            col += 2
-            current_y = margin_top
-
-            if col > 5:
-                c.showPage()
-                col = 0
-                current_y = margin_top
-
-        c.setStrokeColor(colors.black)
-        c.setLineWidth(0.5)
-        c.line(column_positions[col], current_y, column_positions[col] + column_width, current_y)
-
-        current_y -= 10
+        # Linha de separação, só se houver espaço
+        if current_y > ALTURA_MINIMA:
+            c.setStrokeColor(colors.black)
+            c.setLineWidth(0.5)
+            c.line(column_positions[col], current_y, column_positions[col] + column_width, current_y)
+            current_y -= 10
 
     c.save()
+    buffer.seek(0)
+
+    response = HttpResponse(buffer, content_type='application/pdf')
+    response['Content-Disposition'] = 'attachment; filename="pedido_relatorio_horizontal.pdf"'
+    return response
