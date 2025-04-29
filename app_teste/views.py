@@ -155,6 +155,11 @@ def agenda(request):
             # Adiciona o nome do produto à lista de produtos do cliente
             pedidos_agregados[cliente_nome]['produtos'].append(produtos)
 
+        pedidos_agregados = dict(sorted(
+            pedidos_agregados.items(),
+            key=lambda item: item[1]['data_de_locacao']
+        ))
+
         # Tratamento do dia da semana e formatação da data
         for cliente_nome, dados_cliente in pedidos_agregados.items():
             data = dados_cliente['data_de_locacao']
@@ -625,9 +630,12 @@ def gerar_pdf(lista_filtrada):
                 col += 2
                 current_y = margin_top
                 if col > 5:
-                    c.showPage()
+                    c.showPage()  # Cria uma nova página
                     col = 0
                     current_y = margin_top
+
+                    # Redefinir fonte após nova página
+                    c.setFont("Calibri", 10)  # Redefine a fonte corretamente
 
             altura_utilizada = draw_wrapped_text(
                 c, line, column_positions[col], current_y, column_width, max_chars=50
